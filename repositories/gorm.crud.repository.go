@@ -2,25 +2,24 @@ package repositories
 
 import (
 	"context"
+	"fmt"
+	"errors"
+	"sync"
 	"gorm.io/gorm"
+	"gorm.io/gorm/schema"
 	"duolacloud.com/duolacloud/crud-core/types"
-	// "duolacloud.com/duolacloud/crud-core-gorm/query"
+	"duolacloud.com/duolacloud/crud-core-gorm/query"
+	"github.com/mitchellh/mapstructure"
 )
 
 type GormCrudRepositoryOptions struct {
-	StrictValidation bool
 }
 
 type GormCrudRepositoryOption func (*GormCrudRepositoryOptions)
 
-func WithStrictValidation(v bool) GormCrudRepositoryOption {
-	return func(o *GormCrudRepositoryOptions) {
-		o.StrictValidation = v
-	}
-}
-
 type GormCrudRepository[DTO any, CreateDTO any, UpdateDTO any] struct {
 	DB *gorm.DB
+	Schema *schema.Schema
 	Options *GormCrudRepositoryOptions
 }
 
@@ -31,6 +30,9 @@ func NewGormCrudRepository[DTO any, CreateDTO any, UpdateDTO any](
 	r := &GormCrudRepository[DTO, CreateDTO, UpdateDTO]{
 		DB: DB,
 	}
+
+	var dto DTO
+	r.Schema, _ = schema.Parse(&dto, &sync.Map{}, schema.NamingStrategy{})
 
 	r.Options = &GormCrudRepositoryOptions{}
 	for _, o := range opts {
@@ -46,7 +48,10 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Create(c context.Context
 		return nil, res.Error
 	}
 
-	return nil, nil
+	var dto DTO
+	_ = mapstructure.Decode(createDTO, &dto)
+
+	return &dto, nil
 }
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Delete(c context.Context, id types.ID) error {
@@ -55,8 +60,31 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Delete(c context.Context
 	if err != nil {
 		return err
 	}*/
+
+	filter := make(map[string]interface{})
+
+	if len(r.Schema.PrimaryFields) == 1 {
+		fName := r.Schema.PrimaryFields[0].DBName
+		filter[fName] = id	
+	} else if len(r.Schema.PrimaryFields) > 1 {
+		ids, ok := id.(map[string]interface{})
+		if !ok {
+			return errors.New("invalid id, not match")
+		}
+
+		if len(ids) != len(r.Schema.PrimaryFields) {
+			return errors.New("invalid id, size not match")	
+		}
+
+		for _, primaryField := range r.Schema.PrimaryFields {
+			filter[primaryField.DBName] = ids[primaryField.Name]
+		}
+	}
+
+	fmt.Printf("PrimaryFields: table: %s, %v\n", r.Schema.Table, filter)
+
 	var dto DTO
-	res := r.DB.Delete(&dto, id)
+	res := r.DB.Delete(&dto, filter)
 	return res.Error
 }
 
@@ -81,16 +109,19 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Get(c context.Context, i
 }
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Query(c context.Context, q *types.PageQuery) ([]*DTO, error) {
-	/*
-	filterQueryBuilder := query.NewFilterQueryBuilder[DTO](r.Schema, r.Options.StrictValidation)
+	filterQueryBuilder := query.NewFilterQueryBuilder(r.Schema)
 
-	mq, err := filterQueryBuilder.BuildQuery(q);
+	db, err := filterQueryBuilder.BuildQuery(q, r.DB)
 	if err != nil {
 		return nil, err
 	}
-	*/
 
 	var dtos []*DTO
+	res := db.Find(&dtos)
+	if res.Error != nil {
+		return nil, err
+	}
+
 	return dtos, nil
 }
 
