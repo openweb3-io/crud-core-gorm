@@ -49,26 +49,26 @@ func (b *FilterQueryBuilder) applyFilter(db *gorm.DB, filter map[string]interfac
 	return b.whereBuilder.build(db, filter, b.getReferencedRelationsRecursive(b.schema, filter))
 }
 
-func (b *FilterQueryBuilder) applyRelationJoinsRecursive(db *gorm.DB, relationsMap map[string]interface{}, alias string) *gorm.DB {
+func (b *FilterQueryBuilder) applyRelationJoinsRecursive(db *gorm.DB, relationsMap map[string]interface{}, prefix string) *gorm.DB {
 	if relationsMap == nil {
 		return db
 	}
 
 	for relation, _ := range relationsMap {
-		/*
-			var name string
-			if len(alias) > 0 {
-				name = alias
-			} else {
-				name = b.schema.Table
-			}*/
-		fmt.Printf("join relation: %v\n", relation)
+		var name string
+		if len(prefix) > 0 {
+			name = fmt.Sprintf("%s.%s", prefix, relation)
+		} else {
+			name = relation
+		}
+
+		fmt.Printf("join relation: %v\n", name)
 
 		return b.applyRelationJoinsRecursive(
-			db.Joins(relation),
+			db.Joins(name),
 			// db.Joins(fmt.Sprintf("%s.%s", name, relation)),
 			relationsMap[relation].(map[string]interface{}),
-			relation,
+			name,
 		)
 	}
 

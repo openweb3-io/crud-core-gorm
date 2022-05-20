@@ -131,7 +131,7 @@ func TestGromCrudRepository(t *testing.T) {
 	}
 }
 
-func TestOrgnization(t *testing.T) {
+func TestRelations(t *testing.T) {
 	db := SetupDB()
 
 	c := context.TODO()

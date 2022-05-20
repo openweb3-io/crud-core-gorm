@@ -19,7 +19,11 @@ func (b *WhereBuilder) build(
 	if filter["and"] != nil {
 		if and, ok := filter["and"].([]map[string]interface{}); ok {
 			if len(and) > 0 {
-				b.filterAnd(db, and, relationNames)
+				var err error
+				db, err = b.filterAnd(db, and, relationNames)
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
 	}
@@ -27,7 +31,11 @@ func (b *WhereBuilder) build(
 	if filter["or"] != nil {
 		if or, ok := filter["or"].([]map[string]interface{}); ok {
 			if len(or) > 0 {
-				b.filterOr(db, or, relationNames)
+				var err error
+				db, err = b.filterOr(db, or, relationNames)
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
 	}
@@ -35,12 +43,18 @@ func (b *WhereBuilder) build(
 	return b.filterFields(db, filter, relationNames)
 }
 
-func (b *WhereBuilder) filterAnd(db *gorm.DB, filters []map[string]interface{}, relationNames map[string]interface{}) {
-
+func (b *WhereBuilder) filterAnd(db *gorm.DB, filters []map[string]interface{}, relationNames map[string]interface{}) (*gorm.DB, error) {
+	db.Where(nil)
+	/*
+		return where.andWhere(
+			new Brackets((qb) => filters.reduce((w, f) => qb.andWhere(this.createBrackets(f, relationNames, alias)), qb)),
+		)
+	*/
+	return db, nil
 }
 
-func (b *WhereBuilder) filterOr(db *gorm.DB, filters []map[string]interface{}, relationNames map[string]interface{}) {
-
+func (b *WhereBuilder) filterOr(db *gorm.DB, filters []map[string]interface{}, relationNames map[string]interface{}) (*gorm.DB, error) {
+	return db, nil
 }
 
 func (b *WhereBuilder) filterFields(db *gorm.DB, filter map[string]interface{}, relationNames map[string]interface{}) (*gorm.DB, error) {
