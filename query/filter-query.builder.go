@@ -3,7 +3,7 @@ package query
 import (
 	"fmt"
 
-	"duolacloud.com/duolacloud/crud-core/types"
+	"github.com/duolacloud/crud-core/types"
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
 )

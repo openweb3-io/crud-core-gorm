@@ -9,7 +9,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	mysql "gorm.io/driver/mysql"
-	"duolacloud.com/duolacloud/crud-core/types"
+	"github.com/duolacloud/crud-core/types"
 )
 
 type UserEntity struct {

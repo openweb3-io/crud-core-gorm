@@ -7,8 +7,8 @@ import (
 	"sync"
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
-	"duolacloud.com/duolacloud/crud-core/types"
-	"duolacloud.com/duolacloud/crud-core-gorm/query"
+	"github.com/duolacloud/crud-core/types"
+	"github.com/duolacloud/crud-core-gorm/query"
 	"github.com/mitchellh/mapstructure"
 )
 
