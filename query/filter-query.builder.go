@@ -5,6 +5,7 @@ import (
 
 	"github.com/duolacloud/crud-core/types"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"gorm.io/gorm/schema"
 )
 
@@ -46,7 +47,15 @@ func (b *FilterQueryBuilder) applyFilter(db *gorm.DB, filter map[string]interfac
 		return db, nil
 	}
 
-	return b.whereBuilder.build(db, filter, b.getReferencedRelationsRecursive(b.schema, filter))
+	expressions, err := b.whereBuilder.build(db, filter, b.getReferencedRelationsRecursive(b.schema, filter))
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Printf("expressions: %v\n", len(expressions))
+
+	db = db.Where(clause.And(expressions...))
+	return db, nil
 }
 
 func (b *FilterQueryBuilder) applyRelationJoinsRecursive(db *gorm.DB, relationsMap map[string]interface{}, prefix string) *gorm.DB {

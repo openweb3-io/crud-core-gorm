@@ -62,13 +62,14 @@ func SetupDB() *gorm.DB {
 	return db
 }
 
-func TestGromCrudRepository(t *testing.T) {
+func TestGormCrudRepository(t *testing.T) {
 	db := SetupDB()
 
 	r := NewGormCrudRepository[UserEntity, UserEntity, UserEntity](db)
 
 	c := context.TODO()
 
+	/*
 	_ = r.Delete(c, "1")
 	
 	birthday, _ := time.Parse("2006-01-02 15:04:05", "1989-03-02 12:00:01")
@@ -84,14 +85,15 @@ func TestGromCrudRepository(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
+	
+	
 	u, err = r.Get(c, "1")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	t.Logf("u: %v\n", u)
-
+	*/
 
 	query := &types.PageQuery{
 		Fields: []string{
@@ -113,6 +115,7 @@ func TestGromCrudRepository(t *testing.T) {
 			},*/ 
 			"birthday": map[string]interface{}{
 				"gt": "1987-02-02T12:00:01Z",
+				"lt": "1999-02-02T12:00:01Z",
 			},
 		},
 		Page: map[string]int{
@@ -121,7 +124,7 @@ func TestGromCrudRepository(t *testing.T) {
 		},
 	}
 
-	us, err := r.Query(context.TODO(), query)
+	us, err := r.Query(c, query)
 	if err != nil {
 		t.Fatal(err)
 	}
