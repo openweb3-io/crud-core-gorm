@@ -3,7 +3,6 @@ package query
 import (
 	"fmt"
 
-	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
@@ -18,17 +17,17 @@ func NewWhereBuilder() *WhereBuilder {
 }
 
 func (b *WhereBuilder) build(
-	db *gorm.DB,
 	filter map[string]any,
 	relationNames map[string]any,
-) ([]clause.Expression, error) {
+	alias string,
+) (clause.Expression, error) {
 	var expressions []clause.Expression
 
 	if filter["and"] != nil {
 		if and, ok := filter["and"].([]map[string]any); ok {
 			if len(and) > 0 {
 				var err error
-				expression, err := b.filterAnd(db, and, relationNames)
+				expression, err := b.filterAnd(and, relationNames, alias)
 				if err != nil {
 					return nil, err
 				}
@@ -41,7 +40,7 @@ func (b *WhereBuilder) build(
 		if or, ok := filter["or"].([]map[string]any); ok {
 			if len(or) > 0 {
 				var err error
-				expression, err := b.filterOr(db, or, relationNames)
+				expression, err := b.filterOr(or, relationNames, alias)
 				if err != nil {
 					return nil, err
 				}
@@ -50,49 +49,24 @@ func (b *WhereBuilder) build(
 		}
 	}
 
-	expression, err := b.filterFields(db, filter, relationNames)
+	expression, err := b.filterFields(filter, relationNames, alias)
 	if err != nil {
 		return nil, err
 	}
 	expressions = append(expressions, expression)
-
-	return expressions, nil
-}
-
-func (b *WhereBuilder) buildWhere(db *gorm.DB, filter map[string]any, relationNames map[string]any) (clause.Expression, error) {
-	var expressions []clause.Expression
-
-	if filter["and"] != nil {
-		subFilters := filter["and"].([]map[string]any)
-		expression, err := b.filterAnd(db, subFilters, relationNames)
-		if err != nil {
-			return nil, err
-		}
-
-		expressions = append(expressions, expression)
-	}
-
-	if filter["or"] != nil {
-		subFilters := filter["or"].([]map[string]any)
-		expression, err := b.filterOr(db, subFilters, relationNames)
-		if err != nil {
-			return nil, err
-		}
-
-		expressions = append(expressions, expression)
-	}
 
 	if len(expressions) == 1 {
 		return expressions[0], nil
 	}
 
 	return clause.And(expressions...), nil
+
 }
 
-func (b *WhereBuilder) filterAnd(db *gorm.DB, filters []map[string]any, relationNames map[string]any) (clause.Expression, error) {
+func (b *WhereBuilder) filterAnd(filters []map[string]any, relationNames map[string]any, alias string) (clause.Expression, error) {
 	var expressions []clause.Expression
 	for _, filter := range filters {
-		expression, err := b.buildWhere(db, filter, relationNames)
+		expression, err := b.build(filter, relationNames, alias)
 		if err != nil {
 			return nil, err
 		}
@@ -102,10 +76,10 @@ func (b *WhereBuilder) filterAnd(db *gorm.DB, filters []map[string]any, relation
 	return clause.And(expressions...), nil
 }
 
-func (b *WhereBuilder) filterOr(db *gorm.DB, filters []map[string]interface{}, relationNames map[string]interface{}) (clause.Expression, error) {
+func (b *WhereBuilder) filterOr(filters []map[string]any, relationNames map[string]any, alias string) (clause.Expression, error) {
 	var expressions []clause.Expression
 	for _, filter := range filters {
-		expression, err := b.buildWhere(db, filter, relationNames)
+		expression, err := b.build(filter, relationNames, alias)
 		if err != nil {
 			return nil, err
 		}
@@ -115,16 +89,18 @@ func (b *WhereBuilder) filterOr(db *gorm.DB, filters []map[string]interface{}, r
 	return clause.Or(expressions...), nil
 }
 
-func (b *WhereBuilder) filterFields(db *gorm.DB, filter map[string]any, relationNames map[string]any) (clause.Expression, error) {
+func (b *WhereBuilder) filterFields(filter map[string]any, relationNames map[string]any, alias string) (clause.Expression, error) {
 	var expressions []clause.Expression
 
 	for field, value := range filter {
 		if field != "and" && field != "or" {
 			fmt.Printf("filterFields: %s\n", field)
+			fmt.Printf("relationNames: %v\n", relationNames)
 			expression, err := b.withFilterComparison(
 				field,
 				value.(map[string]any),
 				relationNames,
+				alias,
 			)
 			if err != nil {
 				return nil, err
@@ -139,14 +115,14 @@ func (b *WhereBuilder) filterFields(db *gorm.DB, filter map[string]any, relation
 	return clause.And(expressions...), nil
 }
 
-func (b *WhereBuilder) withFilterComparison(field string, cmp map[string]any, relationNames map[string]any) (clause.Expression, error) {
+func (b *WhereBuilder) withFilterComparison(field string, cmp map[string]any, relationNames map[string]any, alias string) (clause.Expression, error) {
 	if relationNames[field] != nil {
 		return b.withRelationFilter(field, cmp, relationNames[field].(map[string]any))
 	}
 
 	var sqlComparisons []clause.Expression
 	for cmpType, value := range cmp {
-		sqlComparison, err := b.sqlComparisonBuilder.Build(field, cmpType, value)
+		sqlComparison, err := b.sqlComparisonBuilder.Build(field, cmpType, value, alias)
 		if err != nil {
 			return nil, err
 		}
@@ -159,5 +135,11 @@ func (b *WhereBuilder) withFilterComparison(field string, cmp map[string]any, re
 }
 
 func (b *WhereBuilder) withRelationFilter(field string, cmp map[string]any, relationNames map[string]any) (clause.Expression, error) {
-	return nil, nil
+	relationWhere := NewWhereBuilder()
+	expr, err := relationWhere.build(cmp, relationNames, field)
+	if err != nil {
+		return nil, err
+	}
+
+	return expr, nil
 }

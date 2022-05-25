@@ -1,11 +1,11 @@
 package query
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/duolacloud/crud-core/types"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 	"gorm.io/gorm/schema"
 )
 
@@ -47,49 +47,50 @@ func (b *FilterQueryBuilder) applyFilter(db *gorm.DB, filter map[string]interfac
 		return db, nil
 	}
 
-	expressions, err := b.whereBuilder.build(db, filter, b.getReferencedRelationsRecursive(b.schema, filter))
+	j, _ := json.Marshal(b.getReferencedRelationsRecursive(b.schema, filter))
+	fmt.Printf("b.getReferencedRelationsRecursive(b.schema, filter): %v\n", string(j))
+
+	expression, err := b.whereBuilder.build(filter, b.getReferencedRelationsRecursive(b.schema, filter), "")
 	if err != nil {
 		return nil, err
 	}
 
-	fmt.Printf("expressions: %v\n", len(expressions))
-
-	db = db.Where(clause.And(expressions...))
+	db = db.Where(expression)
 	return db, nil
 }
 
-func (b *FilterQueryBuilder) applyRelationJoinsRecursive(db *gorm.DB, relationsMap map[string]interface{}, prefix string) *gorm.DB {
+func (b *FilterQueryBuilder) applyRelationJoinsRecursive(db *gorm.DB, relationsMap map[string]interface{}, alias string) *gorm.DB {
 	if relationsMap == nil {
 		return db
 	}
 
 	for relation, _ := range relationsMap {
-		var name string
-		if len(prefix) > 0 {
-			name = fmt.Sprintf("%s.%s", prefix, relation)
-		} else {
-			name = relation
+		subRelationsMap := relationsMap[relation].(map[string]any)
+
+		if len(alias) > 0 {
+			relation = fmt.Sprintf("%s.%s", alias, relation)
 		}
 
-		fmt.Printf("join relation: %v\n", name)
+		fmt.Printf("join relation: %v\n", relation)
 
+		// TODO 目前 join 无法完成 多级关联
 		return b.applyRelationJoinsRecursive(
-			db.Joins(name),
-			// db.Joins(fmt.Sprintf("%s.%s", name, relation)),
-			relationsMap[relation].(map[string]interface{}),
-			name,
+			db.Joins(relation),
+			// db.Joins(relation),
+			subRelationsMap,
+			relation,
 		)
 	}
 
 	return db
 }
 
-func (b *FilterQueryBuilder) getReferencedRelationsRecursive(schema *schema.Schema, filter map[string]interface{}) map[string]interface{} {
-	relationMap := map[string]interface{}{}
+func (b *FilterQueryBuilder) getReferencedRelationsRecursive(schema *schema.Schema, filter map[string]any) map[string]any {
+	relationMap := map[string]any{}
 
 	for filterField, filterValue := range filter {
 		if filterField == "and" || filterField == "or" {
-			if subFilters, ok := filterValue.([]map[string]interface{}); ok {
+			if subFilters, ok := filterValue.([]map[string]any); ok {
 				for _, subFilter := range subFilters {
 					subRelations := b.getReferencedRelationsRecursive(schema, subFilter)
 					for key, subRelation := range subRelations {
@@ -99,25 +100,27 @@ func (b *FilterQueryBuilder) getReferencedRelationsRecursive(schema *schema.Sche
 			}
 		} else {
 			relationMetadata, ok := schema.Relationships.Relations[filterField]
+
 			if !ok {
 				continue
 			}
 
-			var mmm map[string]interface{}
+			var mmm map[string]any
 			if relationMap[filterField] != nil {
-				mmm = relationMap[filterField].(map[string]interface{})
+				mmm = relationMap[filterField].(map[string]any)
 			}
 
 			if mmm == nil {
-				mmm = map[string]interface{}{}
+				mmm = map[string]any{}
 			}
 
-			filterValue1, ok := filterValue.(map[string]interface{})
+			filterValue1, ok := filterValue.(map[string]any)
 			if !ok {
 				continue
 			}
 
-			subFilter := b.getReferencedRelationsRecursive(relationMetadata.Schema, filterValue1)
+			subFilter := b.getReferencedRelationsRecursive(relationMetadata.FieldSchema, filterValue1)
+			fmt.Printf("relationMetadata.Schema: %v, %v, %v\n", relationMetadata.FieldSchema, filterValue1, subFilter)
 			for k, v := range subFilter {
 				mmm[k] = v
 			}

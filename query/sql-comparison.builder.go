@@ -154,10 +154,14 @@ func NewSQLComparisonBuilder() *SQLComparisonBuilder {
 	return &SQLComparisonBuilder{}
 }
 
-func (b *SQLComparisonBuilder) Build(field string, cmp string, value any) (clause.Expression, error) {
+func (b *SQLComparisonBuilder) Build(field string, cmp string, value any, alias string) (clause.Expression, error) {
 	operator, ok := DEFAULT_COMPARISON_MAP[cmp]
 	if !ok {
 		return nil, errors.New(fmt.Sprintf("Operator %s not found", cmp))
+	}
+
+	if len(alias) > 0 {
+		field = fmt.Sprintf("%s.%s", alias, field)
 	}
 
 	return operator(field, value)

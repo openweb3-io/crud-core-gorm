@@ -12,6 +12,12 @@ import (
 	"github.com/duolacloud/crud-core/types"
 )
 
+type IdentityEntity struct {
+	ID string `gorm:"column:id;type:string; size:40; primaryKey"`
+	UserID string `gorm:"column:name"`
+	Provider string `gorm:"column:provider"`
+}
+
 type UserEntity struct {
 	// gorm.Model
 	ID string `gorm:"column:id;type:string; size:40; primaryKey"`
@@ -19,6 +25,8 @@ type UserEntity struct {
 	Country string `gorm:"column:country"`
 	Age int64 `gorm:"column:age"`
 	Birthday time.Time `gorm:"column:birthday"`
+	Identities []*IdentityEntity `json:"identities" gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+
 }
 
 type OrganizationMemberEntity struct {
@@ -54,7 +62,7 @@ func SetupDB() *gorm.DB {
 		panic(dberr)
 	}
 
-	dberr = db.AutoMigrate(&UserEntity{}, &OrganizationEntity{}, &OrganizationMemberEntity{})
+	dberr = db.AutoMigrate(&UserEntity{}, &IdentityEntity{}, &OrganizationEntity{}, &OrganizationMemberEntity{})
 	if dberr != nil {
 		panic(dberr)
 	}
@@ -66,10 +74,10 @@ func TestGormCrudRepository(t *testing.T) {
 	db := SetupDB()
 
 	r := NewGormCrudRepository[UserEntity, UserEntity, UserEntity](db)
-
+	// identityRepo := NewGormCrudRepository[IdentityEntity, IdentityEntity, IdentityEntity](db)
+		
 	c := context.TODO()
-
-	/*
+	
 	_ = r.Delete(c, "1")
 	
 	birthday, _ := time.Parse("2006-01-02 15:04:05", "1989-03-02 12:00:01")
@@ -81,6 +89,13 @@ func TestGormCrudRepository(t *testing.T) {
 		Country: "china",
 		Age: 18,
 		Birthday: birthday, 
+		Identities: []*IdentityEntity{
+			&IdentityEntity{
+				ID: "1",
+				UserID: "1",
+				Provider: "google",
+			},
+		},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -93,7 +108,6 @@ func TestGormCrudRepository(t *testing.T) {
 	}
 
 	t.Logf("u: %v\n", u)
-	*/
 
 	query := &types.PageQuery{
 		Fields: []string{
@@ -141,7 +155,7 @@ func TestRelations(t *testing.T) {
 
 	orgRepo := NewGormCrudRepository[OrganizationEntity, OrganizationEntity, OrganizationEntity](db)
 	memberRepo := NewGormCrudRepository[OrganizationMemberEntity, OrganizationMemberEntity, OrganizationMemberEntity](db)
-
+	
 	_ = orgRepo.Delete(c, "1")
 	_ = memberRepo.Delete(c, "1")
 
@@ -175,10 +189,12 @@ func TestRelations(t *testing.T) {
 			"id",
 			"name",
 		},
-		Filter: map[string]interface{}{
-			"User": map[string]interface{}{
-				"id": map[string]interface{}{
-					"eq": "1",
+		Filter: map[string]any{
+			"User": map[string]any{
+				"Identities": map[string]any{
+					"id": map[string]any{
+						"eq": "1",
+					},
 				},
 			},
 		},
