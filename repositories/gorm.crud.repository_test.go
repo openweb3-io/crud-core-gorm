@@ -193,11 +193,11 @@ func TestRelations(t *testing.T) {
 		},
 		Filter: map[string]any{
 			"User": map[string]any{
-				// "Identities": map[string]any{
+				"Identities": map[string]any{
 					"id": map[string]any{
 						"eq": "1",
 					},
-				// },
+				},
 			},
 		},
 		Page: map[string]int{
