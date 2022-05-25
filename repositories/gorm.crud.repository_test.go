@@ -15,7 +15,7 @@ import (
 
 type IdentityEntity struct {
 	ID string `gorm:"column:id;type:string; size:40; primaryKey"`
-	UserID string `gorm:"column:name"`
+	UserID string `gorm:"column:user_id"`
 	Provider string `gorm:"column:provider"`
 }
 
@@ -33,7 +33,7 @@ type UserEntity struct {
 type OrganizationMemberEntity struct {
 	ID string `gorm:"column:id;type:string; size:40; primaryKey"`
 	Name string `gorm:"column:name"`
-	UserID string
+	UserID string `gorm:"column:user_id"`
 	User *UserEntity `json:"user" gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	OrganizationID string
 	Organization *OrganizationEntity `json:"organization" gorm:"foreignKey:OrganizationID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
