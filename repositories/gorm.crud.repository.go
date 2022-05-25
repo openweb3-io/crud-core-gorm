@@ -139,3 +139,19 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Count(c context.Context,
 	count := int64(0)
 	return count, nil
 }
+
+func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) QueryOne(c context.Context, filter map[string]interface{}) (*DTO, error) {
+	return nil, nil
+}
+
+func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Aggregate(
+	c context.Context,
+	filter map[string]interface{},
+	aggregateQuery *types.AggregateQuery,
+) ([]*types.AggregateResponse, error) {
+	return nil, nil
+}
+
+func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) CursorQuery(c context.Context, query *types.CursorQuery) ([]*DTO, *types.CursorExtra, error) {
+	return nil, nil, nil
+}

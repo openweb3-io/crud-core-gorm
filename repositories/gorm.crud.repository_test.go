@@ -10,6 +10,7 @@ import (
 	"gorm.io/gorm/logger"
 	mysql "gorm.io/driver/mysql"
 	"github.com/duolacloud/crud-core/types"
+	"github.com/duolacloud/crud-core/repositories"
 )
 
 type IdentityEntity struct {
@@ -153,7 +154,8 @@ func TestRelations(t *testing.T) {
 
 	c := context.TODO()
 
-	orgRepo := NewGormCrudRepository[OrganizationEntity, OrganizationEntity, OrganizationEntity](db)
+	var orgRepo repositories.CrudRepository[OrganizationEntity, OrganizationEntity, OrganizationEntity]
+	orgRepo = NewGormCrudRepository[OrganizationEntity, OrganizationEntity, OrganizationEntity](db)
 	memberRepo := NewGormCrudRepository[OrganizationMemberEntity, OrganizationMemberEntity, OrganizationMemberEntity](db)
 	
 	_ = orgRepo.Delete(c, "1")
