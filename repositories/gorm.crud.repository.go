@@ -201,7 +201,6 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) CursorQuery(c context.Co
 		result = result[0:len(result)-1]
 		fmt.Printf("len(result) == q.Limit itemCount: %d, limit: %d\n", len(result), q.Limit)
 	}
-	fmt.Printf("fuck itemCount: %d\n", len(result))
 
 	toCursor := func(item *DTO) (string, error) {	
 		sortFieldValues := make([]any, len(q.Sort))
@@ -215,8 +214,8 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) CursorQuery(c context.Co
 			}
 
 			
-			field := r.Schema.LookUpField(sortField)
-			if field == nil {
+			
+			if _, ok := r.Schema.FieldsByDBName[sortField]; !ok {
 				return "", errors.New(fmt.Sprintf("field %s not found", sortField))
 			}
 

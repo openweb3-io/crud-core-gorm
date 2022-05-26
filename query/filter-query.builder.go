@@ -2,7 +2,9 @@ package query
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"time"
 
 	"github.com/duolacloud/crud-core/types"
 	"gorm.io/gorm"
@@ -62,9 +64,21 @@ func (b *FilterQueryBuilder) BuildCursorQuery(q *types.CursorQuery, db *gorm.DB)
 		return nil, err
 	}
 
-	// sort
+	b.ensureOrders(q)
 
-	// paging
+	db, err = b.buildCursorFilter(db, q)
+	if err != nil {
+		return nil, err
+	}
+
+	// sort
+	db, err = b.applySorting(db, q.Sort)
+	if err != nil {
+		return nil, err
+	}
+
+	limit := q.Limit + 1
+	db = db.Limit(int(limit))
 
 	return db, nil
 }
@@ -253,6 +267,155 @@ func (b *FilterQueryBuilder) applyPaging(db *gorm.DB, pagination map[string]int)
 		if page, ok := pagination["page"]; ok {
 			db = db.Offset(int((page - 1) * size))
 		}
+	}
+
+	return db, nil
+}
+
+func (b *FilterQueryBuilder) ensureOrders(query *types.CursorQuery) {
+	hasId := false
+	for _, sortField := range query.Sort {
+		if sortField[0:1] == "-" {
+			sortField = sortField[1:]
+		}
+
+		if sortField[0:1] == "+" {
+			sortField = sortField[1:]
+		}
+
+		if sortField == "id" {
+			hasId = true
+		}
+	}
+
+	// 没有id的排序，直接要追加 ID
+	if !hasId {
+		index := 0
+		if query.Sort == nil {
+			query.Sort = make([]string, 1)
+			query.Sort[0] = "id"
+		} else {
+			tmp := query.Sort
+			query.Sort = make([]string, len(query.Sort)+1)
+			query.Sort[0] = "id"
+			for i, f := range tmp {
+				query.Sort[i+1] = f
+				index++
+			}
+		}
+	}
+}
+
+func (b *FilterQueryBuilder) buildCursorFilter(db *gorm.DB, query *types.CursorQuery) (*gorm.DB, error) {
+	ors := []clause.Expression{}
+
+	if len(query.Cursor) > 0 {
+		cursor := &types.Cursor{}
+		err := cursor.Unmarshal(query.Cursor)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(cursor.Value) == 0 {
+			return nil, nil
+		}
+
+		if len(cursor.Value) != len(query.Sort) {
+			return nil, errors.New(fmt.Sprintf("cursor format fields length: %d not match orders fields length: %d", len(cursor.Value), len(query.Sort)))
+		}
+
+		fields := make([]string, len(cursor.Value))
+		values := make([]any, len(cursor.Value))
+
+		for i, value := range cursor.Value {
+			// val := 1
+			sortField := query.Sort[i]
+
+			if sortField[0:1] == "-" {
+				sortField = sortField[1:]
+				// val = -1
+			}
+
+			if sortField[0:1] == "+" {
+				sortField = sortField[1:]
+			}
+
+			field, ok := b.schema.FieldsByDBName[sortField]
+			if !ok {
+				err := errors.New(fmt.Sprintf("ERR_DB_UNKNOWN_FIELD %s", sortField))
+				return nil, err
+			}
+			fields[i] = sortField
+
+			switch field.DataType {
+			case "time":
+				// 本身就是 time 类型
+				if t, ok := value.(time.Time); ok {
+					values[i] = t
+				}
+
+				v, err := time.Parse(time.RFC3339, value.(string))
+				if err == nil {
+					values[i] = v
+				}
+
+				// TODO 毫秒类型
+			default:
+				values[i] = value
+			}
+		}
+
+		sort_field_0_direction := 1
+		sort_field_0 := query.Sort[0]
+
+		if sort_field_0[0:1] == "-" {
+			sort_field_0 = sort_field_0[1:]
+			sort_field_0_direction = -1
+		}
+
+		if sort_field_0[0:1] == "+" {
+			sort_field_0 = sort_field_0[1:]
+		}
+
+		if query.Direction == types.CursorDirectionBefore {
+			// before
+			if sort_field_0_direction == -1 {
+				var ands []clause.Expression
+				for i, field := range fields {
+					ands = append(ands, clause.Gt{Column: field, Value: values[i]})
+
+					ors = append(ors, clause.And(ands...))
+				}
+			} else {
+				var ands []clause.Expression
+				for i, field := range fields {
+					ands = append(ands, clause.Lt{Column: field, Value: values[i]})
+
+					ors = append(ors, clause.And(ands...))
+				}
+			}
+		} else {
+			// after
+			if sort_field_0_direction == -1 {
+				var ands []clause.Expression
+				for i, field := range fields {
+					ands = append(ands, clause.Lt{Column: field, Value: values[i]})
+
+					ors = append(ors, clause.And(ands...))
+				}
+			} else {
+				var ands []clause.Expression
+				for i, field := range fields {
+					ands = append(ands, clause.Gt{Column: field, Value: values[i]})
+
+					ors = append(ors, clause.And(ands...))
+				}
+			}
+		}
+	}
+
+	if len(ors) > 0 {
+		db = db.Where(clause.Or(ors...))
 	}
 
 	return db, nil

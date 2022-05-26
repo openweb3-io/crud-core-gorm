@@ -162,6 +162,22 @@ func TestGormCrudRepository(t *testing.T) {
 	for _, i := range us {
 		t.Logf("记录: %v\n", i)
 	}
+	
+
+	{
+		us, extra, err := r.CursorQuery(c, &types.CursorQuery{
+			Limit: 1,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		
+		t.Logf("extra: %v\n", extra)
+
+		for _, i := range us {
+			t.Logf("cursorQuery: 记录: %v\n", i)
+		}
+	}
 }
 
 func TestRelations(t *testing.T) {
