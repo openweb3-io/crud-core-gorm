@@ -6,6 +6,7 @@ import (
 
 	"github.com/duolacloud/crud-core/types"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"gorm.io/gorm/schema"
 )
 
@@ -22,6 +23,32 @@ func NewFilterQueryBuilder(schema *schema.Schema) *FilterQueryBuilder {
 }
 
 func (b *FilterQueryBuilder) BuildQuery(q *types.PageQuery, db *gorm.DB) (*gorm.DB, error) {
+	// relation join
+	hasRelations := b.filterHasRelations(q.Filter)
+
+	if hasRelations {
+		db = b.applyRelationJoinsRecursive(db, b.getReferencedRelationsRecursive(b.schema, q.Filter), "")
+	}
+
+	// filter
+	db, err := b.applyFilter(db, q.Filter)
+	if err != nil {
+		return nil, err
+	}
+
+	// sort
+	db, err = b.applySorting(db, q.Sort)
+	if err != nil {
+		return nil, err
+	}
+
+	// paging
+	db, err = b.applyPaging(db, q.Page)
+
+	return db, nil
+}
+
+func (b *FilterQueryBuilder) BuildCursorQuery(q *types.CursorQuery, db *gorm.DB) (*gorm.DB, error) {
 	// relation join
 	hasRelations := b.filterHasRelations(q.Filter)
 
@@ -181,4 +208,52 @@ func (b *FilterQueryBuilder) getFilterFields(filter map[string]any) []string {
 	}
 
 	return fields
+}
+
+func (b *FilterQueryBuilder) applySorting(db *gorm.DB, sort []string) (*gorm.DB, error) {
+	for _, sortField := range sort {
+		isDesc := false
+		if sortField[0:1] == "-" {
+			sortField = sortField[1:]
+			isDesc = true
+		}
+
+		if sortField[0:1] == "+" {
+			sortField = sortField[1:]
+			isDesc = false
+		}
+
+		db = db.Order(clause.OrderByColumn{Column: clause.Column{Name: sortField}, Desc: isDesc})
+	}
+
+	return db, nil
+}
+
+func (b *FilterQueryBuilder) applyPaging(db *gorm.DB, pagination map[string]int) (*gorm.DB, error) {
+	// check for limit
+	if limit, ok := pagination["limit"]; ok {
+		db = db.Limit(int(limit))
+
+		// check for offset (once limit is set)
+		if offset, ok := pagination["offset"]; ok {
+			db = db.Offset(int(offset))
+		}
+
+		// check for skip (once limit is set)
+		if skip, ok := pagination["skip"]; ok {
+			db = db.Offset(int(skip))
+		}
+	}
+
+	// check for page and size
+	if size, ok := pagination["size"]; ok {
+		db = db.Limit(int(size))
+
+		// set skip (requires understanding of size)
+		if page, ok := pagination["page"]; ok {
+			db = db.Offset(int((page - 1) * size))
+		}
+	}
+
+	return db, nil
 }

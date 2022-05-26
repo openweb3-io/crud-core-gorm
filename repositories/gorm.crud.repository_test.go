@@ -172,7 +172,7 @@ func TestRelations(t *testing.T) {
 	var orgRepo repositories.CrudRepository[OrganizationEntity, OrganizationEntity, OrganizationEntity]
 	orgRepo = NewGormCrudRepository[OrganizationEntity, OrganizationEntity, OrganizationEntity](db)
 	memberRepo := NewGormCrudRepository[OrganizationMemberEntity, OrganizationMemberEntity, OrganizationMemberEntity](db)
-	
+
 	_ = orgRepo.Delete(c, "1")
 	_ = memberRepo.Delete(c, "1")
 
@@ -208,11 +208,57 @@ func TestRelations(t *testing.T) {
 		},
 		Filter: map[string]any{
 			"User": map[string]any{
-				"Identities": map[string]any{
+				// "Identities": map[string]any{
 					"id": map[string]any{
 						"eq": "1",
 					},
-				},
+				// },
+			},
+		},
+		Page: map[string]int{
+			// "limit": 10,
+			// "offset": 0,
+			"size": 10,
+			"page": 1,
+		},
+	}
+
+	members, err := memberRepo.Query(c, query)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, m := range members {
+		t.Logf("成员: %v\n", m)
+	}
+
+	{
+		member, err := memberRepo.QueryOne(c, query.Filter)
+		if err != nil {
+			t.Fatal(err)
+		}
+	
+		t.Logf("queryOne: %v\n", member)
+	}
+}
+
+func TestCount(t *testing.T) {
+	db := SetupDB()
+
+	memberRepo := NewGormCrudRepository[OrganizationMemberEntity, OrganizationMemberEntity, OrganizationMemberEntity](db)
+
+	query := &types.PageQuery{
+		Fields: []string{
+			"id",
+			"name",
+		},
+		Filter: map[string]any{
+			"User": map[string]any{
+				// "Identities": map[string]any{
+					"id": map[string]any{
+						"eq": "1",
+					},
+				// },
 			},
 		},
 		Page: map[string]int{
@@ -221,12 +267,10 @@ func TestRelations(t *testing.T) {
 		},
 	}
 
-	members, err := memberRepo.Query(context.TODO(), query)
+	count, err := memberRepo.Count(context.TODO(), query)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	for _, m := range members {
-		t.Logf("成员: %v\n", m)
-	}
+	t.Logf("count: %v\n", count)
 }

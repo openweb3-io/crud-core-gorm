@@ -1,8 +1,10 @@
 package repositories
 
 import (
+	"encoding/json"
 	"context"
 	"fmt"
+	"bytes"
 	"errors"
 	"sync"
 	"gorm.io/gorm"
@@ -126,22 +128,41 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Query(c context.Context,
 }
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Count(c context.Context, q *types.PageQuery) (int64, error) {
-	/*
-	filterQueryBuilder := query.NewFilterQueryBuilder[DTO](r.Schema, r.Options.StrictValidation)
+	filterQueryBuilder := query.NewFilterQueryBuilder(r.Schema)
 
-	mq, err := filterQueryBuilder.BuildQuery(q);
+	db, err := filterQueryBuilder.BuildQuery(q, r.DB)
 	if err != nil {
 		return 0, err
 	}
-	*/
 
-	// TODO
-	count := int64(0)
+	var dto DTO
+
+	var count int64
+	res := db.Model(dto).Count(&count)
+	if res.Error != nil {
+		return 0, err
+	}
+
 	return count, nil
 }
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) QueryOne(c context.Context, filter map[string]any) (*DTO, error) {
-	return nil, nil
+	filterQueryBuilder := query.NewFilterQueryBuilder(r.Schema)
+
+	db, err := filterQueryBuilder.BuildQuery(&types.PageQuery{
+		Filter: filter,
+	}, r.DB)
+	if err != nil {
+		return nil, err
+	}
+
+	var dto *DTO
+	res := db.Model(dto).First(&dto)
+	if res.Error != nil {
+		return nil, err
+	}
+
+	return dto, nil
 }
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Aggregate(
@@ -152,6 +173,83 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Aggregate(
 	return nil, nil
 }
 
-func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) CursorQuery(c context.Context, query *types.CursorQuery) ([]*DTO, *types.CursorExtra, error) {
-	return nil, nil, nil
+func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) CursorQuery(c context.Context, q *types.CursorQuery) ([]*DTO, *types.CursorExtra, error) {
+	filterQueryBuilder := query.NewFilterQueryBuilder(r.Schema)
+
+	db, err := filterQueryBuilder.BuildCursorQuery(q, r.DB)
+	if err != nil {
+		return nil, nil, err
+	}
+
+
+	var result []*DTO
+	res := db.Find(&result)
+	if res.Error != nil {
+		return nil, nil, err
+	}
+
+	extra := &types.CursorExtra{}
+
+	if len(result) == 0 {
+		return nil, extra, nil
+	}
+
+	if len(result) == int(q.Limit + 1) {
+		extra.HasNext = true
+		extra.HasPrevious = true
+
+		result = result[0:len(result)-1]
+		fmt.Printf("len(result) == q.Limit itemCount: %d, limit: %d\n", len(result), q.Limit)
+	}
+	fmt.Printf("fuck itemCount: %d\n", len(result))
+
+	toCursor := func(item *DTO) (string, error) {	
+		sortFieldValues := make([]any, len(q.Sort))
+		for i, sortField := range q.Sort {
+			if sortField[0:1] == "-" {
+				sortField = sortField[1:]
+			}
+	
+			if sortField[0:1] == "+" {
+				sortField = sortField[1:]
+			}
+
+			
+			field := r.Schema.LookUpField(sortField)
+			if field == nil {
+				return "", errors.New(fmt.Sprintf("field %s not found", sortField))
+			}
+
+			var m map[string]any
+			bytes, _ := json.Marshal(item)
+			_ = json.Unmarshal(bytes, &m)
+
+			sortFieldValues[i] = m[sortField]
+		}
+
+		cursor := &types.Cursor{
+			Value: sortFieldValues,
+		}
+
+		w := new(bytes.Buffer)
+		err = cursor.Marshal(w)
+		if err != nil {
+			return "", err
+		}
+
+		return w.String(), nil
+	}
+
+	itemCount := len(result)
+	extra.StartCursor, err = toCursor(result[0])
+	if err != nil {
+		return nil, nil, err
+	}
+
+	extra.EndCursor, err = toCursor(result[itemCount-1])
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return result, extra, nil
 }
