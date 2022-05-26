@@ -19,6 +19,10 @@ type IdentityEntity struct {
 	Provider string `gorm:"column:provider"`
 }
 
+func (user *IdentityEntity) TableName() string {
+	return "identities"
+}
+
 type UserEntity struct {
 	// gorm.Model
 	ID string `gorm:"column:id;type:string; size:40; primaryKey"`
@@ -27,7 +31,10 @@ type UserEntity struct {
 	Age int64 `gorm:"column:age"`
 	Birthday time.Time `gorm:"column:birthday"`
 	Identities []*IdentityEntity `json:"identities" gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+}
 
+func (user *UserEntity) TableName() string {
+	return "users"
 }
 
 type OrganizationMemberEntity struct {
@@ -39,9 +46,17 @@ type OrganizationMemberEntity struct {
 	Organization *OrganizationEntity `json:"organization" gorm:"foreignKey:OrganizationID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
 
+func (user *OrganizationMemberEntity) TableName() string {
+	return "organization_members"
+}
+
 type OrganizationEntity struct {
 	ID string `gorm:";type:string; size:40; primaryKey"`
 	Name string `gorm:"name"`
+}
+
+func (user *OrganizationEntity) TableName() string {
+	return "organizations"
 }
 
 func SetupDB() *gorm.DB {
