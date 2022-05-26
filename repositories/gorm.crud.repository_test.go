@@ -115,20 +115,20 @@ func TestGormCrudRepository(t *testing.T) {
 			"name",
 			"_id",
 		},
-		Filter: map[string]interface{}{
-			"age": map[string]interface{}{
-				"between": map[string]interface{}{
+		Filter: map[string]any{
+			"age": map[string]any{
+				"between": map[string]any{
 					"lower": 18,
 					"upper": 24,
 				},
 			},
-			/*"name": map[string]interface{}{
-				"in": []interface{}{
+			/*"name": map[string]any{
+				"in": []any{
 					"李四",
 					"哈哈",
 				},
 			},*/ 
-			"birthday": map[string]interface{}{
+			"birthday": map[string]any{
 				"gt": "1987-02-02T12:00:01Z",
 				"lt": "1999-02-02T12:00:01Z",
 			},

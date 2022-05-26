@@ -8,13 +8,13 @@ import (
 )
 
 func IsBetweenVal(
-	val interface{},
+	val any,
 ) bool {
 	if val == nil {
 		return false
 	}
 
-	m, ok := val.(map[string]interface{})
+	m, ok := val.(map[string]any)
 	if !ok {
 		return false
 	}

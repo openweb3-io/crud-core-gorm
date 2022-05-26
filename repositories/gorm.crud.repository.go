@@ -61,13 +61,13 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Delete(c context.Context
 		return err
 	}*/
 
-	filter := make(map[string]interface{})
+	filter := make(map[string]any)
 
 	if len(r.Schema.PrimaryFields) == 1 {
 		fName := r.Schema.PrimaryFields[0].DBName
 		filter[fName] = id	
 	} else if len(r.Schema.PrimaryFields) > 1 {
-		ids, ok := id.(map[string]interface{})
+		ids, ok := id.(map[string]any)
 		if !ok {
 			return errors.New("invalid id, not match")
 		}
@@ -140,13 +140,13 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Count(c context.Context,
 	return count, nil
 }
 
-func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) QueryOne(c context.Context, filter map[string]interface{}) (*DTO, error) {
+func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) QueryOne(c context.Context, filter map[string]any) (*DTO, error) {
 	return nil, nil
 }
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Aggregate(
 	c context.Context,
-	filter map[string]interface{},
+	filter map[string]any,
 	aggregateQuery *types.AggregateQuery,
 ) ([]*types.AggregateResponse, error) {
 	return nil, nil

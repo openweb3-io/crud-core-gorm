@@ -42,7 +42,7 @@ func (b *FilterQueryBuilder) BuildQuery(q *types.PageQuery, db *gorm.DB) (*gorm.
 	return db, nil
 }
 
-func (b *FilterQueryBuilder) applyFilter(db *gorm.DB, filter map[string]interface{}) (*gorm.DB, error) {
+func (b *FilterQueryBuilder) applyFilter(db *gorm.DB, filter map[string]any) (*gorm.DB, error) {
 	if filter == nil {
 		return db, nil
 	}
@@ -59,7 +59,7 @@ func (b *FilterQueryBuilder) applyFilter(db *gorm.DB, filter map[string]interfac
 	return db, nil
 }
 
-func (b *FilterQueryBuilder) applyRelationJoinsRecursive(db *gorm.DB, relationsMap map[string]interface{}, alias string) *gorm.DB {
+func (b *FilterQueryBuilder) applyRelationJoinsRecursive(db *gorm.DB, relationsMap map[string]any, alias string) *gorm.DB {
 	if relationsMap == nil {
 		return db
 	}
@@ -131,7 +131,7 @@ func (b *FilterQueryBuilder) getReferencedRelationsRecursive(schema *schema.Sche
 	return relationMap
 }
 
-func (b *FilterQueryBuilder) filterHasRelations(filter map[string]interface{}) bool {
+func (b *FilterQueryBuilder) filterHasRelations(filter map[string]any) bool {
 	if filter == nil {
 		return false
 	}
@@ -139,7 +139,7 @@ func (b *FilterQueryBuilder) filterHasRelations(filter map[string]interface{}) b
 	return len(b.getReferencedRelations(filter)) > 0
 }
 
-func (b *FilterQueryBuilder) getReferencedRelations(filter map[string]interface{}) []string {
+func (b *FilterQueryBuilder) getReferencedRelations(filter map[string]any) []string {
 	relations := b.schema.Relationships.Relations
 
 	referencedFields := b.getFilterFields(filter)
@@ -157,13 +157,13 @@ func (b *FilterQueryBuilder) getReferencedRelations(filter map[string]interface{
 	return referencedRelations
 }
 
-func (b *FilterQueryBuilder) getFilterFields(filter map[string]interface{}) []string {
+func (b *FilterQueryBuilder) getFilterFields(filter map[string]any) []string {
 	fieldMap := map[string]bool{}
 
 	for filterField, fieldValue := range filter {
 		if filterField == "and" || filterField == "or" {
 			if fieldValue != nil {
-				if subFilter, ok := fieldValue.(map[string]interface{}); ok {
+				if subFilter, ok := fieldValue.(map[string]any); ok {
 					subFields := b.getFilterFields(subFilter)
 					for _, subField := range subFields {
 						fieldMap[subField] = true
