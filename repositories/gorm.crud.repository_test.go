@@ -215,6 +215,9 @@ func TestRelations(t *testing.T) {
 				// },
 			},
 		},
+		Sort: []string{
+			"name",
+		},
 		Page: map[string]int{
 			// "limit": 10,
 			// "offset": 0,
