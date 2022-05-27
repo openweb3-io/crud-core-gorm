@@ -90,7 +90,7 @@ func SetupDB() *gorm.DB {
 func TestGormCrudRepository(t *testing.T) {
 	db := SetupDB()
 
-	r := NewGormCrudRepository[UserEntity, UserEntity, UserEntity](db)
+	r := NewGormCrudRepository[UserEntity, UserEntity, map[string]any](db)
 	// identityRepo := NewGormCrudRepository[IdentityEntity, IdentityEntity, IdentityEntity](db)
 		
 	c := context.TODO()
@@ -120,8 +120,9 @@ func TestGormCrudRepository(t *testing.T) {
 
 	// update
 	{
-		u.Name = "李四"
-		u, err = r.Update(c, "1", u)
+		u, err = r.Update(c, "1", &map[string]any{
+			"name": "李四", 
+		})
 		if err != nil {
 			t.Error(err)
 		}

@@ -12,7 +12,6 @@ import (
 	"github.com/duolacloud/crud-core/types"
 	"github.com/duolacloud/crud-core-gorm/query"
 	"github.com/mitchellh/mapstructure"
-	"reflect"
 )
 
 type GormCrudRepositoryOptions struct {
@@ -96,14 +95,20 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Delete(c context.Context
 }
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Update(c context.Context, id types.ID, updateDTO *UpdateDTO, opts ...types.UpdateOption) (*DTO, error) {
-	modelValue := reflect.New(r.Schema.ModelType)
-	res := r.DB.Model(modelValue).WithContext(c).Save(updateDTO)
+	// modelValue := reflect.New(r.Schema.ModelType)
+	dto, err := r.Get(c, id)
+	if err != nil {
+		return nil, err
+	}
+
+	// dto 在 updates之后也被改变了
+	res := r.DB.Model(dto).WithContext(c).Updates(updateDTO)
 	if res.Error != nil {
 		return nil, res.Error
 	}
 
 	// TODO 返回对象
-	return nil, nil
+	return dto, nil
 }
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Get(c context.Context, id types.ID) (*DTO, error) {
