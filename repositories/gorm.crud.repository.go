@@ -148,7 +148,6 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Count(c context.Context,
 
 	var dto DTO
 
-	// with context 不能放在 model 前面
 	var count int64
 	res := db.WithContext(c).Model(dto).Count(&count)
 	if res.Error != nil {
