@@ -11,6 +11,7 @@ import (
 	mysql "gorm.io/driver/mysql"
 	"github.com/duolacloud/crud-core/types"
 	"github.com/duolacloud/crud-core/repositories"
+	"github.com/stretchr/testify/assert"
 )
 
 type IdentityEntity struct {
@@ -113,9 +114,7 @@ func TestGormCrudRepository(t *testing.T) {
 			},
 		},
 	})
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 	
 	// update
 	{
