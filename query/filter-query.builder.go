@@ -13,14 +13,16 @@ import (
 )
 
 type FilterQueryBuilder struct {
-	schema       *schema.Schema
-	whereBuilder *WhereBuilder
+	schema           *schema.Schema
+	whereBuilder     *WhereBuilder
+	aggregateBuilder *AggregateBuilder
 }
 
 func NewFilterQueryBuilder(schema *schema.Schema) *FilterQueryBuilder {
 	return &FilterQueryBuilder{
-		schema:       schema,
-		whereBuilder: NewWhereBuilder(),
+		schema:           schema,
+		whereBuilder:     NewWhereBuilder(),
+		aggregateBuilder: NewAggregateBuilder(),
 	}
 }
 
@@ -422,28 +424,52 @@ func (b *FilterQueryBuilder) buildCursorFilter(db *gorm.DB, query *types.CursorQ
 }
 
 func (b *FilterQueryBuilder) BuildAggregateQuery(db *gorm.DB, aggregate *types.AggregateQuery, filter map[string]any) (*gorm.DB, error) {
-	/*
-		filterQuery, err := b.buildFilterQuery(filter)
-		if err != nil {
-			return nil, err
+	hasRelations := b.filterHasRelations(filter)
+
+	if hasRelations {
+		db = b.applyRelationJoinsRecursive(db, b.getReferencedRelationsRecursive(b.schema, filter), "")
+	}
+
+	db, err := b.applyAggregate(db, aggregate, "")
+	if err != nil {
+		return nil, err
+	}
+
+	// filter
+	db, err = b.applyFilter(db, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	db, err = b.applyAggregateSorting(db, aggregate.GroupBy, "")
+	if err != nil {
+		return nil, err
+	}
+
+	db, err = b.applyGroupBy(db, aggregate.GroupBy, "")
+	if err != nil {
+		return nil, err
+	}
+
+	return db, nil
+}
+
+func (b *FilterQueryBuilder) applyAggregate(db *gorm.DB, aggregate *types.AggregateQuery, alias string) (*gorm.DB, error) {
+	return b.aggregateBuilder.Build(db, aggregate, alias)
+}
+
+func (b *FilterQueryBuilder) applyAggregateSorting(db *gorm.DB, groupBy []string, alias string) (*gorm.DB, error) {
+	return db, nil
+}
+
+func (b *FilterQueryBuilder) applyGroupBy(db *gorm.DB, groupBy []string, alias string) (*gorm.DB, error) {
+	for _, group := range groupBy {
+		if len(alias) > 0 {
+			group = fmt.Sprintf("%s.%s", alias, group)
 		}
 
-		aggr, err := b.aggregateBuilder.build(aggregate)
-		if err != nil {
-			return nil, err
-		}
+		db = db.Group(group)
+	}
 
-		opts := &options.FindOptions{}
-
-		sort, err := b.buildAggregateSorting(aggregate)
-		if err != nil {
-			return nil, err
-		}
-
-		if sort != nil {
-			opts.Sort = sort
-		}
-	*/
-
-	return nil, nil
+	return db, nil
 }

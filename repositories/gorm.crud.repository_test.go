@@ -3,6 +3,7 @@ package repositories
 import (
 	"os"
 	"log"
+	"encoding/json"
 	"context"
 	"time"
 	"testing"
@@ -307,4 +308,53 @@ func TestCount(t *testing.T) {
 	}
 
 	t.Logf("count: %v\n", count)
+}
+
+func TestAggregate(t *testing.T) {
+	db := SetupDB()
+
+	userRepo := NewGormCrudRepository[UserEntity, UserEntity, map[string]any](db)
+
+	query := &types.PageQuery{
+		Fields: []string{
+			"id",
+			"name",
+		},
+		Filter: map[string]any{
+			"id": map[string]any{
+				"eq": "1",
+			},
+		},
+		Page: map[string]int{
+			"limit": 10,
+			"offset": 0,
+		},
+	}
+
+	aggs, err := userRepo.Aggregate(context.TODO(), query.Filter, &types.AggregateQuery{
+		GroupBy: []string{
+			"country",
+		},
+		Count: []string{
+			"country",
+		},
+		Max: []string{
+			"age",
+		},
+		Min: []string{
+			"age",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, agg := range aggs {
+		js, err := json.Marshal(agg)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		t.Logf("聚合: %v\n", string(js))
+	}
 }
