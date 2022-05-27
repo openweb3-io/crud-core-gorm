@@ -150,7 +150,7 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Count(c context.Context,
 
 	// with context 不能放在 model 前面
 	var count int64
-	res := db.Model(dto).WithContext(c).Count(&count)
+	res := db.WithContext(c).Model(dto).Count(&count)
 	if res.Error != nil {
 		return 0, err
 	}
@@ -182,7 +182,23 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Aggregate(
 	filter map[string]any,
 	aggregateQuery *types.AggregateQuery,
 ) ([]*types.AggregateResponse, error) {
-	return nil, nil
+	filterQueryBuilder := query.NewFilterQueryBuilder(r.Schema)
+
+	var dto DTO
+	db := r.DB.Model(dto).WithContext(c)
+	db, err := filterQueryBuilder.BuildAggregateQuery(db, aggregateQuery, filter)
+	if err != nil {
+		return nil, err
+	}
+	
+	var results []map[string]any
+
+	res := db.Find(results)
+	if res.Error != nil {
+		return nil, res.Error
+	}
+
+	return query.ConvertToAggregateResponse(results)
 }
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) CursorQuery(c context.Context, q *types.CursorQuery) ([]*DTO, *types.CursorExtra, error) {

@@ -420,3 +420,30 @@ func (b *FilterQueryBuilder) buildCursorFilter(db *gorm.DB, query *types.CursorQ
 
 	return db, nil
 }
+
+func (b *FilterQueryBuilder) BuildAggregateQuery(db *gorm.DB, aggregate *types.AggregateQuery, filter map[string]any) (*gorm.DB, error) {
+	/*
+		filterQuery, err := b.buildFilterQuery(filter)
+		if err != nil {
+			return nil, err
+		}
+
+		aggr, err := b.aggregateBuilder.build(aggregate)
+		if err != nil {
+			return nil, err
+		}
+
+		opts := &options.FindOptions{}
+
+		sort, err := b.buildAggregateSorting(aggregate)
+		if err != nil {
+			return nil, err
+		}
+
+		if sort != nil {
+			opts.Sort = sort
+		}
+	*/
+
+	return nil, nil
+}
