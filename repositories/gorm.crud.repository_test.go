@@ -115,7 +115,9 @@ func TestGormCrudRepository(t *testing.T) {
 		},
 	})
 	assert.NoError(t, err)
-	
+	t.Logf("创建用户: %v\n", u)
+
+
 	// update
 	{
 		u.Name = "李四"

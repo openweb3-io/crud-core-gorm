@@ -46,13 +46,16 @@ func NewGormCrudRepository[DTO any, CreateDTO any, UpdateDTO any](
 }
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Create(c context.Context, createDTO *CreateDTO, opts ...types.CreateOption) (*DTO, error) {
-	res := r.DB.WithContext(c).Create(createDTO)
+	var dto DTO
+	err := mapstructure.Decode(createDTO, &dto)
+	if err != nil {
+		return nil, err
+	}
+
+	res := r.DB.WithContext(c).Create(dto)
 	if res.Error != nil {
 		return nil, res.Error
 	}
-
-	var dto DTO
-	_ = mapstructure.Decode(createDTO, &dto)
 
 	return &dto, nil
 }
