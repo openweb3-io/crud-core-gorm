@@ -192,7 +192,7 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Aggregate(
 	
 	var results []map[string]any
 
-	res := db.Find(results)
+	res := db.Find(&results)
 	if res.Error != nil {
 		return nil, res.Error
 	}

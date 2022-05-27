@@ -26,10 +26,7 @@ func ConvertToAggregateResponse(aggregates []map[string]any) ([]*types.Aggregate
 	for i, aggregate := range aggregates {
 		ar := &types.AggregateResponse{}
 
-		agg, err := extractResponse(aggregate["_id"].(map[string]any))
-		ar.Merge(agg)
-
-		agg, err = extractResponse(aggregate)
+		agg, err := extractResponse(aggregate)
 		ar.Merge(agg)
 		if err != nil {
 			return nil, err
@@ -49,10 +46,6 @@ func extractResponse(response map[string]any) (*types.AggregateResponse, error) 
 	agg := &types.AggregateResponse{}
 
 	for resultField, _ /*v*/ := range response {
-		if resultField == "_id" {
-			continue
-		}
-
 		matchResult := AGG_REGEXP.FindAllStringSubmatch(resultField, -1)
 
 		if len(matchResult[0]) != 3 {
