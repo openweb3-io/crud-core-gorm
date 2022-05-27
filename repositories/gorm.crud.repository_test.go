@@ -117,6 +117,15 @@ func TestGormCrudRepository(t *testing.T) {
 		t.Fatal(err)
 	}
 	
+	// update
+	{
+		u.Name = "李四"
+		u, err = r.Update(c, "1", u)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Logf("update user: %v\n", u)
+	}
 	
 	u, err = r.Get(c, "1")
 	if err != nil {
