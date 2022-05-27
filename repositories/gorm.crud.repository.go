@@ -46,7 +46,7 @@ func NewGormCrudRepository[DTO any, CreateDTO any, UpdateDTO any](
 }
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Create(c context.Context, createDTO *CreateDTO, opts ...types.CreateOption) (*DTO, error) {
-	res := r.DB.Create(createDTO)
+	res := r.DB.WithContext(c).Create(createDTO)
 	if res.Error != nil {
 		return nil, res.Error
 	}
@@ -80,20 +80,21 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Delete(c context.Context
 		}
 
 		for _, primaryField := range r.Schema.PrimaryFields {
-			filter[primaryField.DBName] = ids[primaryField.Name]
+			// fmt.Printf("primaryField dbname: %s, name: %s\n", primaryField.DBName, primaryField.Name)
+			filter[primaryField.DBName] = ids[primaryField.DBName]
 		}
 	}
 
 	fmt.Printf("PrimaryFields: table: %s, %v\n", r.Schema.Table, filter)
 
 	var dto DTO
-	res := r.DB.Delete(&dto, filter)
+	res := r.DB.WithContext(c).Delete(&dto, filter)
 	return res.Error
 }
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Update(c context.Context, id types.ID, updateDTO *UpdateDTO, opts ...types.UpdateOption) (*DTO, error) {
 	modelValue := reflect.New(r.Schema.ModelType)
-	res := r.DB.Model(modelValue).Save(updateDTO)
+	res := r.DB.Model(modelValue).WithContext(c).Save(updateDTO)
 	if res.Error != nil {
 		return nil, res.Error
 	}
@@ -104,7 +105,7 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Update(c context.Context
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Get(c context.Context, id types.ID) (*DTO, error) {
 	var dto DTO
-	err := r.DB.First(&dto, id).Error
+	err := r.DB.WithContext(c).First(&dto, id).Error
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +122,7 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Query(c context.Context,
 	}
 
 	var dtos []*DTO
-	res := db.Find(&dtos)
+	res := db.WithContext(c).Find(&dtos)
 	if res.Error != nil {
 		return nil, err
 	}
@@ -139,8 +140,9 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Count(c context.Context,
 
 	var dto DTO
 
+	// with context 不能放在 model 前面
 	var count int64
-	res := db.Model(dto).Count(&count)
+	res := db.Model(dto).WithContext(c).Count(&count)
 	if res.Error != nil {
 		return 0, err
 	}
@@ -159,7 +161,7 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) QueryOne(c context.Conte
 	}
 
 	var dto *DTO
-	res := db.Model(dto).First(&dto)
+	res := db.Model(dto).WithContext(c).First(&dto)
 	if res.Error != nil {
 		return nil, err
 	}
@@ -185,7 +187,7 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) CursorQuery(c context.Co
 
 
 	var result []*DTO
-	res := db.Find(&result)
+	res := db.WithContext(c).Find(&result)
 	if res.Error != nil {
 		return nil, nil, err
 	}
@@ -215,8 +217,6 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) CursorQuery(c context.Co
 				sortField = sortField[1:]
 			}
 
-			
-			
 			if _, ok := r.Schema.FieldsByDBName[sortField]; !ok {
 				return "", errors.New(fmt.Sprintf("field %s not found", sortField))
 			}

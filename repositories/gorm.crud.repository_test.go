@@ -114,7 +114,7 @@ func TestGormCrudRepository(t *testing.T) {
 		},
 	})
 	if err != nil {
-		t.Fatal(err)
+		t.Error(err)
 	}
 	
 	// update
@@ -122,17 +122,21 @@ func TestGormCrudRepository(t *testing.T) {
 		u.Name = "李四"
 		u, err = r.Update(c, "1", u)
 		if err != nil {
-			t.Fatal(err)
+			t.Error(err)
 		}
 		t.Logf("update user: %v\n", u)
 	}
 	
-	u, err = r.Get(c, "1")
-	if err != nil {
-		t.Fatal(err)
+	// get
+	{
+		u, err = r.Get(c, "1")
+		if err != nil {
+			t.Error(err)
+		}
+	
+		t.Logf("get user: %v\n", u)	
 	}
-
-	t.Logf("u: %v\n", u)
+	
 
 	query := &types.PageQuery{
 		Fields: []string{
@@ -165,7 +169,7 @@ func TestGormCrudRepository(t *testing.T) {
 
 	us, err := r.Query(c, query)
 	if err != nil {
-		t.Fatal(err)
+		t.Error(err)
 	}
 	
 	for _, i := range us {
@@ -178,7 +182,7 @@ func TestGormCrudRepository(t *testing.T) {
 			Limit: 1,
 		})
 		if err != nil {
-			t.Fatal(err)
+			t.Error(err)
 		}
 		
 		t.Logf("extra: %v\n", extra)
@@ -207,7 +211,7 @@ func TestRelations(t *testing.T) {
 	})
 
 	if err != nil {
-		t.Fatal(err)
+		t.Error(err)
 	}
 
 	t.Logf("创建组织: %v\n", org)
@@ -220,7 +224,7 @@ func TestRelations(t *testing.T) {
 	})
 
 	if err != nil {
-		t.Fatal(err)
+		t.Error(err)
 	}
 
 	t.Logf("创建成员: %v\n", member)
@@ -253,7 +257,7 @@ func TestRelations(t *testing.T) {
 
 	members, err := memberRepo.Query(c, query)
 	if err != nil {
-		t.Fatal(err)
+		t.Error(err)
 	}
 
 	for _, m := range members {
@@ -263,7 +267,7 @@ func TestRelations(t *testing.T) {
 	{
 		member, err := memberRepo.QueryOne(c, query.Filter)
 		if err != nil {
-			t.Fatal(err)
+			t.Error(err)
 		}
 	
 		t.Logf("queryOne: %v\n", member)
@@ -297,7 +301,7 @@ func TestCount(t *testing.T) {
 
 	count, err := memberRepo.Count(context.TODO(), query)
 	if err != nil {
-		t.Fatal(err)
+		t.Error(err)
 	}
 
 	t.Logf("count: %v\n", count)
