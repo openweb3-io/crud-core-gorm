@@ -98,7 +98,9 @@ func TestCreateMany(t *testing.T) {
 		
 	c := context.TODO()
 	
-	_ = r.Delete(c, "1")
+	for i := 1; i <= 5; i++ {
+		_ = r.Delete(c, fmt.Sprintf("%v", i))
+	}
 	
 	birthday, _ := time.Parse("2006-01-02 15:04:05", "1989-03-02 12:00:01")
 	t.Logf("birthday: %s\n", birthday)
