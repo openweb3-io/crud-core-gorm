@@ -5,6 +5,7 @@ import (
 	"log"
 	"encoding/json"
 	"context"
+	"fmt"
 	"time"
 	"testing"
 	"gorm.io/gorm"
@@ -30,7 +31,7 @@ type UserEntity struct {
 	ID string `gorm:"column:id;type:string; size:40; primaryKey"`
 	Name string `gorm:"column:name"`
 	Country string `gorm:"column:country"`
-	Age int64 `gorm:"column:age"`
+	Age int `gorm:"column:age"`
 	Birthday time.Time `gorm:"column:birthday"`
 	Identities []*IdentityEntity `json:"identities" gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
@@ -87,6 +88,47 @@ func SetupDB() *gorm.DB {
 
 	return db
 }
+
+
+func TestCreateMany(t *testing.T) {
+	db := SetupDB()
+
+	r := NewGormCrudRepository[UserEntity, UserEntity, map[string]any](db)
+	// identityRepo := NewGormCrudRepository[IdentityEntity, IdentityEntity, IdentityEntity](db)
+		
+	c := context.TODO()
+	
+	_ = r.Delete(c, "1")
+	
+	birthday, _ := time.Parse("2006-01-02 15:04:05", "1989-03-02 12:00:01")
+	t.Logf("birthday: %s\n", birthday)
+
+	var users []*UserEntity
+	for i := 1; i <= 5; i++ {
+		userID := fmt.Sprintf("%v", i)
+		users = append(users, &UserEntity{
+			ID: userID,
+			Name: fmt.Sprintf("用户%v", i),
+			Country: "china",
+			Age: 18 + i,
+			Birthday: birthday, 
+			Identities: []*IdentityEntity{
+				&IdentityEntity{
+					ID: fmt.Sprintf("%v", i),
+					UserID: userID,
+					Provider: "google",
+				},
+			},
+		})
+	}
+
+	createdUsers, err := r.CreateMany(c, users, types.WithCreateBatchSize(3))
+	assert.NoError(t, err)
+	for _, u := range createdUsers {
+		t.Logf("批量创建用户: %v\n", u)
+	}
+}
+
 
 func TestGormCrudRepository(t *testing.T) {
 	db := SetupDB()
@@ -195,6 +237,7 @@ func TestGormCrudRepository(t *testing.T) {
 		}
 	}
 }
+
 
 func TestRelations(t *testing.T) {
 	db := SetupDB()

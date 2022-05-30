@@ -59,6 +59,35 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Create(c context.Context
 	return &dto, nil
 }
 
+func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) CreateMany(c context.Context, items []*CreateDTO, opts ...types.CreateManyOption) ([]*DTO, error) {
+	dtos := make([]*DTO, len(items))
+	for i, item := range items {
+		var dto *DTO
+		err := mapstructure.Decode(item, &dto)
+		if err != nil {
+			return nil, err
+		}
+		dtos[i] = dto
+	}
+
+	var _opts types.CreateManyOptions
+	for _, o := range opts {
+		o(&_opts)
+	}
+
+	createBatchSize := _opts.CreateBatchSize
+	if createBatchSize <= 0 {
+		createBatchSize = 200
+	}
+
+	res := r.DB.Session(&gorm.Session{CreateBatchSize: createBatchSize}).WithContext(c).Create(&dtos)
+	if res.Error != nil {
+		return nil, res.Error
+	}
+
+	return dtos, nil
+}
+
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Delete(c context.Context, id types.ID) error {
 	/*
 	model, err := r.Get(c, id)

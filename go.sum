@@ -9,6 +9,8 @@ github.com/duolacloud/crud-core v0.0.0-20220526115955-e96590baeeb2 h1:lf95hnm3qg
 github.com/duolacloud/crud-core v0.0.0-20220526115955-e96590baeeb2/go.mod h1:woHwoHZHZjwpopGxbwENeuh0qjFffNtDeo31MKHC38w=
 github.com/duolacloud/crud-core v0.0.0-20220527184531-48a5242bfcfc h1:MpldBs5+I27jtRaPEs52WUGDyb5zQydAtRy6586dZtw=
 github.com/duolacloud/crud-core v0.0.0-20220527184531-48a5242bfcfc/go.mod h1:woHwoHZHZjwpopGxbwENeuh0qjFffNtDeo31MKHC38w=
+github.com/duolacloud/crud-core v0.0.0-20220530113253-9e7898899ace h1:2bJxk33X1EnvVSyTO0bmiZAIvA2P9ikndpZQWR/uqUg=
+github.com/duolacloud/crud-core v0.0.0-20220530113253-9e7898899ace/go.mod h1:woHwoHZHZjwpopGxbwENeuh0qjFffNtDeo31MKHC38w=
 github.com/erikstmartin/go-testdb v0.0.0-20160219214506-8d10e4a1bae5/go.mod h1:a2zkGnVExMxdzMo3M0Hi/3sEU+cWnZpSni0O6/Yb/P0=
 github.com/go-sql-driver/mysql v1.5.0/go.mod h1:DCzpHaOWr8IXmIStZouvnhqoel9Qv2LBy8hT2VhHyBg=
 github.com/go-sql-driver/mysql v1.6.0 h1:BCTh4TKNUYmOmMUcQ3IipzF5prigylS7XXjEkfCHuOE=
