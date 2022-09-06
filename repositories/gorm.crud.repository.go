@@ -52,7 +52,7 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Create(c context.Context
 		return nil, err
 	}
 
-	res := r.DB.WithContext(c).Create(dto)
+	res := r.DB.WithContext(c).Create(&dto)
 	if res.Error != nil {
 		return nil, res.Error
 	}
