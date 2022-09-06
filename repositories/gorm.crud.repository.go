@@ -1,27 +1,28 @@
 package repositories
 
 import (
-	"encoding/json"
-	"context"
-	"fmt"
 	"bytes"
+	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"sync"
+
+	"github.com/duolacloud/crud-core-gorm/query"
+	"github.com/duolacloud/crud-core/types"
+	"github.com/mitchellh/mapstructure"
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
-	"github.com/duolacloud/crud-core/types"
-	"github.com/duolacloud/crud-core-gorm/query"
-	"github.com/mitchellh/mapstructure"
 )
 
 type GormCrudRepositoryOptions struct {
 }
 
-type GormCrudRepositoryOption func (*GormCrudRepositoryOptions)
+type GormCrudRepositoryOption func(*GormCrudRepositoryOptions)
 
 type GormCrudRepository[DTO any, CreateDTO any, UpdateDTO any] struct {
-	DB *gorm.DB
-	Schema *schema.Schema
+	DB      *gorm.DB
+	Schema  *schema.Schema
 	Options *GormCrudRepositoryOptions
 }
 
@@ -90,16 +91,16 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) CreateMany(c context.Con
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Delete(c context.Context, id types.ID) error {
 	/*
-	model, err := r.Get(c, id)
-	if err != nil {
-		return err
-	}*/
+		model, err := r.Get(c, id)
+		if err != nil {
+			return err
+		}*/
 
 	filter := make(map[string]any)
 
 	if len(r.Schema.PrimaryFields) == 1 {
 		fName := r.Schema.PrimaryFields[0].DBName
-		filter[fName] = id	
+		filter[fName] = id
 	} else if len(r.Schema.PrimaryFields) > 1 {
 		ids, ok := id.(map[string]any)
 		if !ok {
@@ -107,7 +108,7 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Delete(c context.Context
 		}
 
 		if len(ids) != len(r.Schema.PrimaryFields) {
-			return errors.New("invalid id, size not match")	
+			return errors.New("invalid id, size not match")
 		}
 
 		for _, primaryField := range r.Schema.PrimaryFields {
@@ -143,10 +144,12 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Update(c context.Context
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Get(c context.Context, id types.ID) (*DTO, error) {
 	var dto DTO
 	err := r.DB.WithContext(c).First(&dto, id).Error
-	if err != nil {
+	if err != nil && err != gorm.ErrRecordNotFound {
 		return nil, err
 	}
-
+	if err != nil && err == gorm.ErrRecordNotFound {
+		return nil, nil
+	}
 	return &dto, nil
 }
 
@@ -218,7 +221,7 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Aggregate(
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var results []map[string]any
 
 	res := db.Find(&results)
@@ -237,7 +240,6 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) CursorQuery(c context.Co
 		return nil, nil, err
 	}
 
-
 	var result []*DTO
 	res := db.WithContext(c).Find(&result)
 	if res.Error != nil {
@@ -250,21 +252,21 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) CursorQuery(c context.Co
 		return nil, extra, nil
 	}
 
-	if len(result) == int(q.Limit + 1) {
+	if len(result) == int(q.Limit+1) {
 		extra.HasNext = true
 		extra.HasPrevious = true
 
-		result = result[0:len(result)-1]
+		result = result[0 : len(result)-1]
 		fmt.Printf("len(result) == q.Limit itemCount: %d, limit: %d\n", len(result), q.Limit)
 	}
 
-	toCursor := func(item *DTO) (string, error) {	
+	toCursor := func(item *DTO) (string, error) {
 		sortFieldValues := make([]any, len(q.Sort))
 		for i, sortField := range q.Sort {
 			if sortField[0:1] == "-" {
 				sortField = sortField[1:]
 			}
-	
+
 			if sortField[0:1] == "+" {
 				sortField = sortField[1:]
 			}
