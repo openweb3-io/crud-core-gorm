@@ -146,7 +146,7 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Get(c context.Context, i
 	fName := r.Schema.PrimaryFields[0].DBName
 	// 直接 First(&dto, id)，字符串不会转义
 	err := r.DB.WithContext(c).First(&dto, fName+" = ?", id).Error
-	if err != nil && err != gorm.ErrRecordNotFound {
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
 	}
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
