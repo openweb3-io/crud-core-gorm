@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/duolacloud/crud-core/types"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	mysql "gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -38,6 +39,14 @@ type UserEntity struct {
 
 func (user *UserEntity) TableName() string {
 	return "users"
+}
+
+type UserRelationEntity struct {
+	From      string `gorm:"primaryKey"`
+	To        string `gorm:"primaryKey"`
+	Status    bool
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 type OrganizationMemberEntity struct {
@@ -73,7 +82,7 @@ func SetupDB() *gorm.DB {
 		},
 	)
 
-	dsn := "root:secret@(localhost)/test?charset=utf8mb4&parseTime=True&loc=Local"
+	dsn := "root:root@(localhost)/test?charset=utf8mb4&parseTime=True&loc=Local"
 	db, dberr := gorm.Open(mysql.Open(dsn), &gorm.Config{
 		Logger: newLogger,
 	})
@@ -81,7 +90,7 @@ func SetupDB() *gorm.DB {
 		panic(dberr)
 	}
 
-	dberr = db.AutoMigrate(&UserEntity{}, &IdentityEntity{}, &OrganizationEntity{}, &OrganizationMemberEntity{})
+	dberr = db.AutoMigrate(&UserEntity{}, &IdentityEntity{}, &UserRelationEntity{}, &OrganizationEntity{}, &OrganizationMemberEntity{})
 	if dberr != nil {
 		panic(dberr)
 	}
@@ -394,4 +403,74 @@ func TestAggregate(t *testing.T) {
 
 		t.Logf("聚合: %v\n", string(js))
 	}
+}
+
+func TestGet(t *testing.T) {
+	db := SetupDB()
+
+	r := NewGormCrudRepository[UserEntity, UserEntity, map[string]any](db)
+
+	c := context.TODO()
+
+	userID := uuid.NewString()
+	identityID := uuid.NewString()
+	user := &UserEntity{
+		ID:       userID,
+		Name:     fmt.Sprintf("用户%s", userID),
+		Country:  "china",
+		Age:      18,
+		Birthday: time.Now(),
+		Identities: []*IdentityEntity{
+			{
+				ID:       identityID,
+				UserID:   userID,
+				Provider: "google",
+			},
+		},
+	}
+	r.Create(c, user)
+
+	gotUser, err := r.Get(c, userID)
+	assert.Nil(t, err)
+	assert.Equal(t, user.ID, gotUser.ID)
+	assert.Equal(t, user.Name, gotUser.Name)
+
+	gotUser, err = r.Get(c, "123456")
+	assert.Nil(t, err)
+	assert.Nil(t, gotUser)
+
+	gotUser, err = r.Get(c, "Where 1 = 1")
+	assert.Nil(t, err)
+	assert.Nil(t, gotUser)
+
+	relationRepo := NewGormCrudRepository[UserRelationEntity, UserRelationEntity, map[string]any](db)
+
+	from := uuid.NewString()
+	to := uuid.NewString()
+	relation := &UserRelationEntity{
+		From:   from,
+		To:     to,
+		Status: true,
+	}
+	relationRepo.Create(c, relation)
+
+	gotRelation, err := relationRepo.Get(c, "123")
+	t.Log(err)
+	assert.NotNil(t, err)
+	assert.Nil(t, gotRelation)
+
+	gotRelation, err = relationRepo.Get(c, map[string]any{"from": from})
+	t.Log(err)
+	assert.NotNil(t, err)
+	assert.Nil(t, gotRelation)
+
+	gotRelation, err = relationRepo.Get(c, map[string]any{"from": from, "to": to})
+	assert.Nil(t, err)
+	assert.Equal(t, relation.From, gotRelation.From)
+	assert.Equal(t, relation.To, gotRelation.To)
+	assert.True(t, relation.Status)
+
+	gotRelation, err = relationRepo.Get(c, map[string]any{"from": from, "to": "douyin|12345"})
+	assert.Nil(t, err)
+	assert.Nil(t, gotRelation)
 }

@@ -142,10 +142,29 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Update(c context.Context
 }
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Get(c context.Context, id types.ID) (*DTO, error) {
+	filter := make(map[string]any)
+
+	if len(r.Schema.PrimaryFields) == 1 {
+		fName := r.Schema.PrimaryFields[0].DBName
+		filter[fName] = id
+	} else if len(r.Schema.PrimaryFields) > 1 {
+		ids, ok := id.(map[string]any)
+		if !ok {
+			return nil, errors.New("invalid id, not match")
+		}
+		if len(ids) != len(r.Schema.PrimaryFields) {
+			return nil, errors.New("invalid id, size not match")
+		}
+		for _, primaryField := range r.Schema.PrimaryFields {
+			// fmt.Printf("primaryField dbname: %s, name: %s\n", primaryField.DBName, primaryField.Name)
+			filter[primaryField.DBName] = ids[primaryField.DBName]
+		}
+	}
+
+	fmt.Printf("PrimaryFields: table: %s, %v\n", r.Schema.Table, filter)
+
 	var dto DTO
-	fName := r.Schema.PrimaryFields[0].DBName
-	// 直接 First(&dto, id)，字符串不会转义
-	err := r.DB.WithContext(c).First(&dto, fName+" = ?", id).Error
+	err := r.DB.WithContext(c).Where(filter).First(&dto).Error
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
 	}
