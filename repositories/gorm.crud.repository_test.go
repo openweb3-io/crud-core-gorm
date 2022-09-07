@@ -1,24 +1,24 @@
 package repositories
 
 import (
-	"os"
-	"log"
-	"encoding/json"
 	"context"
+	"encoding/json"
 	"fmt"
-	"time"
+	"log"
+	"os"
 	"testing"
+	"time"
+
+	"github.com/duolacloud/crud-core/types"
+	"github.com/stretchr/testify/assert"
+	mysql "gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
-	mysql "gorm.io/driver/mysql"
-	"github.com/duolacloud/crud-core/types"
-	"github.com/duolacloud/crud-core/repositories"
-	"github.com/stretchr/testify/assert"
 )
 
 type IdentityEntity struct {
-	ID string `gorm:"column:id;type:string; size:40; primaryKey"`
-	UserID string `gorm:"column:user_id"`
+	ID       string `gorm:"column:id;type:string; size:40; primaryKey"`
+	UserID   string `gorm:"column:user_id"`
 	Provider string `gorm:"column:provider"`
 }
 
@@ -28,11 +28,11 @@ func (user *IdentityEntity) TableName() string {
 
 type UserEntity struct {
 	// gorm.Model
-	ID string `gorm:"column:id;type:string; size:40; primaryKey"`
-	Name string `gorm:"column:name"`
-	Country string `gorm:"column:country"`
-	Age int `gorm:"column:age"`
-	Birthday time.Time `gorm:"column:birthday"`
+	ID         string            `gorm:"column:id;type:string; size:40; primaryKey"`
+	Name       string            `gorm:"column:name"`
+	Country    string            `gorm:"column:country"`
+	Age        int               `gorm:"column:age"`
+	Birthday   time.Time         `gorm:"column:birthday"`
 	Identities []*IdentityEntity `json:"identities" gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
 
@@ -41,12 +41,12 @@ func (user *UserEntity) TableName() string {
 }
 
 type OrganizationMemberEntity struct {
-	ID string `gorm:"column:id;type:string; size:40; primaryKey"`
-	Name string `gorm:"column:name"`
-	UserID string `gorm:"column:user_id"`
-	User *UserEntity `json:"user" gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	ID             string      `gorm:"column:id;type:string; size:40; primaryKey"`
+	Name           string      `gorm:"column:name"`
+	UserID         string      `gorm:"column:user_id"`
+	User           *UserEntity `json:"user" gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	OrganizationID string
-	Organization *OrganizationEntity `json:"organization" gorm:"foreignKey:OrganizationID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	Organization   *OrganizationEntity `json:"organization" gorm:"foreignKey:OrganizationID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
 
 func (user *OrganizationMemberEntity) TableName() string {
@@ -54,7 +54,7 @@ func (user *OrganizationMemberEntity) TableName() string {
 }
 
 type OrganizationEntity struct {
-	ID string `gorm:";type:string; size:40; primaryKey"`
+	ID   string `gorm:";type:string; size:40; primaryKey"`
 	Name string `gorm:"name"`
 }
 
@@ -66,10 +66,10 @@ func SetupDB() *gorm.DB {
 	newLogger := logger.New(
 		log.New(os.Stdout, "\r\n", log.LstdFlags), // io writer
 		logger.Config{
-			SlowThreshold:              time.Second,   // Slow SQL threshold
-			LogLevel:                   logger.Info, // Log level
-			IgnoreRecordNotFoundError: true,           // Ignore ErrRecordNotFound error for logger
-			Colorful:                  false,          // Disable color
+			SlowThreshold:             time.Second, // Slow SQL threshold
+			LogLevel:                  logger.Info, // Log level
+			IgnoreRecordNotFoundError: true,        // Ignore ErrRecordNotFound error for logger
+			Colorful:                  false,       // Disable color
 		},
 	)
 
@@ -89,19 +89,18 @@ func SetupDB() *gorm.DB {
 	return db
 }
 
-
 func TestCreateMany(t *testing.T) {
 	db := SetupDB()
 
 	r := NewGormCrudRepository[UserEntity, UserEntity, map[string]any](db)
 	// identityRepo := NewGormCrudRepository[IdentityEntity, IdentityEntity, IdentityEntity](db)
-		
+
 	c := context.TODO()
-	
+
 	for i := 1; i <= 5; i++ {
 		_ = r.Delete(c, fmt.Sprintf("%v", i))
 	}
-	
+
 	birthday, _ := time.Parse("2006-01-02 15:04:05", "1989-03-02 12:00:01")
 	t.Logf("birthday: %s\n", birthday)
 
@@ -109,15 +108,15 @@ func TestCreateMany(t *testing.T) {
 	for i := 1; i <= 5; i++ {
 		userID := fmt.Sprintf("%v", i)
 		users = append(users, &UserEntity{
-			ID: userID,
-			Name: fmt.Sprintf("用户%v", i),
-			Country: "china",
-			Age: 18 + i,
-			Birthday: birthday, 
+			ID:       userID,
+			Name:     fmt.Sprintf("用户%v", i),
+			Country:  "china",
+			Age:      18 + i,
+			Birthday: birthday,
 			Identities: []*IdentityEntity{
-				&IdentityEntity{
-					ID: fmt.Sprintf("%v", i),
-					UserID: userID,
+				{
+					ID:       fmt.Sprintf("%v", i),
+					UserID:   userID,
 					Provider: "google",
 				},
 			},
@@ -131,30 +130,29 @@ func TestCreateMany(t *testing.T) {
 	}
 }
 
-
 func TestGormCrudRepository(t *testing.T) {
 	db := SetupDB()
 
 	r := NewGormCrudRepository[UserEntity, UserEntity, map[string]any](db)
 	// identityRepo := NewGormCrudRepository[IdentityEntity, IdentityEntity, IdentityEntity](db)
-		
+
 	c := context.TODO()
-	
+
 	_ = r.Delete(c, "1")
-	
+
 	birthday, _ := time.Parse("2006-01-02 15:04:05", "1989-03-02 12:00:01")
 	t.Logf("birthday: %s\n", birthday)
 
 	u, err := r.Create(c, &UserEntity{
-		ID: "1",
-		Name: "张三",
-		Country: "china",
-		Age: 18,
-		Birthday: birthday, 
+		ID:       "1",
+		Name:     "张三",
+		Country:  "china",
+		Age:      18,
+		Birthday: birthday,
 		Identities: []*IdentityEntity{
-			&IdentityEntity{
-				ID: "1",
-				UserID: "1",
+			{
+				ID:       "1",
+				UserID:   "1",
 				Provider: "google",
 			},
 		},
@@ -162,28 +160,26 @@ func TestGormCrudRepository(t *testing.T) {
 	assert.NoError(t, err)
 	t.Logf("创建用户: %v\n", u)
 
-
 	// update
 	{
 		u, err = r.Update(c, "1", &map[string]any{
-			"name": "李四", 
+			"name": "李四",
 		})
 		if err != nil {
 			t.Error(err)
 		}
 		t.Logf("update user: %v\n", u)
 	}
-	
+
 	// get
 	{
 		u, err = r.Get(c, "1")
 		if err != nil {
 			t.Error(err)
 		}
-	
-		t.Logf("get user: %v\n", u)	
+
+		t.Logf("get user: %v\n", u)
 	}
-	
 
 	query := &types.PageQuery{
 		Fields: []string{
@@ -202,14 +198,14 @@ func TestGormCrudRepository(t *testing.T) {
 					"李四",
 					"哈哈",
 				},
-			},*/ 
+			},*/
 			"birthday": map[string]any{
 				"gt": "1987-02-02T12:00:01Z",
 				"lt": "1999-02-02T12:00:01Z",
 			},
 		},
 		Page: map[string]int{
-			"limit": 1,
+			"limit":  1,
 			"offset": 0,
 		},
 	}
@@ -218,11 +214,10 @@ func TestGormCrudRepository(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	
+
 	for _, i := range us {
 		t.Logf("记录: %v\n", i)
 	}
-	
 
 	{
 		us, extra, err := r.CursorQuery(c, &types.CursorQuery{
@@ -231,7 +226,7 @@ func TestGormCrudRepository(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		
+
 		t.Logf("extra: %v\n", extra)
 
 		for _, i := range us {
@@ -240,21 +235,19 @@ func TestGormCrudRepository(t *testing.T) {
 	}
 }
 
-
 func TestRelations(t *testing.T) {
 	db := SetupDB()
 
 	c := context.TODO()
 
-	var orgRepo repositories.CrudRepository[OrganizationEntity, OrganizationEntity, OrganizationEntity]
-	orgRepo = NewGormCrudRepository[OrganizationEntity, OrganizationEntity, OrganizationEntity](db)
+	orgRepo := NewGormCrudRepository[OrganizationEntity, OrganizationEntity, OrganizationEntity](db)
 	memberRepo := NewGormCrudRepository[OrganizationMemberEntity, OrganizationMemberEntity, OrganizationMemberEntity](db)
 
 	_ = orgRepo.Delete(c, "1")
 	_ = memberRepo.Delete(c, "1")
 
 	org, err := orgRepo.Create(c, &OrganizationEntity{
-		ID: "1",
+		ID:   "1",
 		Name: "组织1",
 	})
 
@@ -265,10 +258,10 @@ func TestRelations(t *testing.T) {
 	t.Logf("创建组织: %v\n", org)
 
 	member, err := memberRepo.Create(c, &OrganizationMemberEntity{
-		ID: "1",
-		Name: "成员",
+		ID:             "1",
+		Name:           "成员",
 		OrganizationID: "1",
-		UserID: "1",
+		UserID:         "1",
 	})
 
 	if err != nil {
@@ -276,7 +269,6 @@ func TestRelations(t *testing.T) {
 	}
 
 	t.Logf("创建成员: %v\n", member)
-
 
 	query := &types.PageQuery{
 		Fields: []string{
@@ -286,9 +278,9 @@ func TestRelations(t *testing.T) {
 		Filter: map[string]any{
 			"User": map[string]any{
 				// "Identities": map[string]any{
-					"id": map[string]any{
-						"eq": "1",
-					},
+				"id": map[string]any{
+					"eq": "1",
+				},
 				// },
 			},
 		},
@@ -317,7 +309,7 @@ func TestRelations(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-	
+
 		t.Logf("queryOne: %v\n", member)
 	}
 }
@@ -335,14 +327,14 @@ func TestCount(t *testing.T) {
 		Filter: map[string]any{
 			"User": map[string]any{
 				// "Identities": map[string]any{
-					"id": map[string]any{
-						"eq": "1",
-					},
+				"id": map[string]any{
+					"eq": "1",
+				},
 				// },
 			},
 		},
 		Page: map[string]int{
-			"limit": 10,
+			"limit":  10,
 			"offset": 0,
 		},
 	}
@@ -371,7 +363,7 @@ func TestAggregate(t *testing.T) {
 			},
 		},
 		Page: map[string]int{
-			"limit": 10,
+			"limit":  10,
 			"offset": 0,
 		},
 	}

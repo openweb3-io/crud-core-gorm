@@ -274,7 +274,7 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) CursorQuery(c context.Co
 			}
 
 			if _, ok := r.Schema.FieldsByDBName[sortField]; !ok {
-				return "", errors.New(fmt.Sprintf("field %s not found", sortField))
+				return "", fmt.Errorf("field %s not found", sortField)
 			}
 
 			var m map[string]any
