@@ -63,12 +63,12 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Create(c context.Context
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) CreateMany(c context.Context, items []*CreateDTO, opts ...types.CreateManyOption) ([]*DTO, error) {
 	dtos := make([]*DTO, len(items))
 	for i, item := range items {
-		var dto *DTO
+		var dto DTO
 		err := mapstructure.Decode(item, &dto)
 		if err != nil {
 			return nil, err
 		}
-		dtos[i] = dto
+		dtos[i] = &dto
 	}
 
 	var _opts types.CreateManyOptions
@@ -220,13 +220,13 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) QueryOne(c context.Conte
 		return nil, err
 	}
 
-	var dto *DTO
-	res := db.Model(dto).WithContext(c).First(&dto)
+	var dto DTO
+	res := db.Model(&dto).WithContext(c).First(&dto)
 	if res.Error != nil {
 		return nil, err
 	}
 
-	return dto, nil
+	return &dto, nil
 }
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Aggregate(
