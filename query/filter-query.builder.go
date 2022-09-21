@@ -2,7 +2,6 @@ package query
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
@@ -48,8 +47,7 @@ func (b *FilterQueryBuilder) BuildQuery(q *types.PageQuery, db *gorm.DB) (*gorm.
 
 	// paging
 	db, err = b.applyPaging(db, q.Page)
-
-	return db, nil
+	return db, err
 }
 
 func (b *FilterQueryBuilder) BuildCursorQuery(q *types.CursorQuery, db *gorm.DB) (*gorm.DB, error) {
@@ -107,7 +105,7 @@ func (b *FilterQueryBuilder) applyRelationJoinsRecursive(db *gorm.DB, relationsM
 		return db
 	}
 
-	for relation, _ := range relationsMap {
+	for relation := range relationsMap {
 		subRelationsMap := relationsMap[relation].(map[string]any)
 
 		if len(alias) > 0 {
@@ -219,7 +217,7 @@ func (b *FilterQueryBuilder) getFilterFields(filter map[string]any) []string {
 	}
 
 	var fields []string
-	for key, _ := range fieldMap {
+	for key := range fieldMap {
 		fields = append(fields, key)
 	}
 
@@ -323,7 +321,7 @@ func (b *FilterQueryBuilder) buildCursorFilter(db *gorm.DB, query *types.CursorQ
 		}
 
 		if len(cursor.Value) != len(query.Sort) {
-			return nil, errors.New(fmt.Sprintf("cursor format fields length: %d not match orders fields length: %d", len(cursor.Value), len(query.Sort)))
+			return nil, fmt.Errorf("cursor format fields length: %d not match orders fields length: %d", len(cursor.Value), len(query.Sort))
 		}
 
 		fields := make([]string, len(cursor.Value))
@@ -344,7 +342,7 @@ func (b *FilterQueryBuilder) buildCursorFilter(db *gorm.DB, query *types.CursorQ
 
 			field, ok := b.schema.FieldsByDBName[sortField]
 			if !ok {
-				err := errors.New(fmt.Sprintf("ERR_DB_UNKNOWN_FIELD %s", sortField))
+				err := fmt.Errorf("ERR_DB_UNKNOWN_FIELD %s", sortField)
 				return nil, err
 			}
 			fields[i] = sortField
@@ -360,7 +358,6 @@ func (b *FilterQueryBuilder) buildCursorFilter(db *gorm.DB, query *types.CursorQ
 				if err == nil {
 					values[i] = v
 				}
-
 				// TODO 毫秒类型
 			default:
 				values[i] = value
@@ -371,13 +368,13 @@ func (b *FilterQueryBuilder) buildCursorFilter(db *gorm.DB, query *types.CursorQ
 		sort_field_0 := query.Sort[0]
 
 		if sort_field_0[0:1] == "-" {
-			sort_field_0 = sort_field_0[1:]
+			// sort_field_0 = sort_field_0[1:]
 			sort_field_0_direction = -1
 		}
 
-		if sort_field_0[0:1] == "+" {
-			sort_field_0 = sort_field_0[1:]
-		}
+		// if sort_field_0[0:1] == "+" {
+		// 	sort_field_0 = sort_field_0[1:]
+		// }
 
 		if query.Direction == types.CursorDirectionBefore {
 			// before
@@ -385,14 +382,12 @@ func (b *FilterQueryBuilder) buildCursorFilter(db *gorm.DB, query *types.CursorQ
 				var ands []clause.Expression
 				for i, field := range fields {
 					ands = append(ands, clause.Gt{Column: field, Value: values[i]})
-
 					ors = append(ors, clause.And(ands...))
 				}
 			} else {
 				var ands []clause.Expression
 				for i, field := range fields {
 					ands = append(ands, clause.Lt{Column: field, Value: values[i]})
-
 					ors = append(ors, clause.And(ands...))
 				}
 			}

@@ -1,7 +1,6 @@
 package query
 
 import (
-	"errors"
 	"fmt"
 
 	"gorm.io/gorm/clause"
@@ -111,7 +110,7 @@ var DEFAULT_COMPARISON_MAP = map[string]ExpressionFunc{
 	},
 	"between": func(field string, value any) (clause.Expression, error) {
 		if !IsBetweenVal(value) {
-			return nil, errors.New(fmt.Sprintf("Invalid value for between expected {lower: val, upper: val} got %v", value))
+			return nil, fmt.Errorf("invalid value for between expected {lower: val, upper: val} got %v", value)
 		}
 
 		values := value.(map[string]any)
@@ -129,7 +128,7 @@ var DEFAULT_COMPARISON_MAP = map[string]ExpressionFunc{
 	},
 	"notbetween": func(field string, value any) (clause.Expression, error) {
 		if !IsBetweenVal(value) {
-			return nil, errors.New(fmt.Sprintf("Invalid value for between expected {lower: val, upper: val} got %v", value))
+			return nil, fmt.Errorf("invalid value for between expected {lower: val, upper: val} got %v", value)
 		}
 
 		values := value.(map[string]any)
@@ -157,7 +156,7 @@ func NewSQLComparisonBuilder() *SQLComparisonBuilder {
 func (b *SQLComparisonBuilder) Build(field string, cmp string, value any, alias string) (clause.Expression, error) {
 	operator, ok := DEFAULT_COMPARISON_MAP[cmp]
 	if !ok {
-		return nil, errors.New(fmt.Sprintf("Operator %s not found", cmp))
+		return nil, fmt.Errorf("operator %s not found", cmp)
 	}
 
 	if len(alias) > 0 {

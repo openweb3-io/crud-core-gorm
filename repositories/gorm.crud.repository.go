@@ -30,9 +30,7 @@ func NewGormCrudRepository[DTO any, CreateDTO any, UpdateDTO any](
 	DB *gorm.DB,
 	opts ...GormCrudRepositoryOption,
 ) *GormCrudRepository[DTO, CreateDTO, UpdateDTO] {
-	r := &GormCrudRepository[DTO, CreateDTO, UpdateDTO]{
-		DB: DB,
-	}
+	r := &GormCrudRepository[DTO, CreateDTO, UpdateDTO]{DB: DB}
 
 	var dto DTO
 	r.Schema, _ = schema.Parse(&dto, &sync.Map{}, schema.NamingStrategy{})
@@ -41,7 +39,6 @@ func NewGormCrudRepository[DTO any, CreateDTO any, UpdateDTO any](
 	for _, o := range opts {
 		o(r.Options)
 	}
-
 	return r
 }
 
@@ -51,12 +48,10 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Create(c context.Context
 	if err != nil {
 		return nil, err
 	}
-
 	res := r.DB.WithContext(c).Create(&dto)
 	if res.Error != nil {
-		return nil, res.Error
+		return nil, wrapGormError(res.Error)
 	}
-
 	return &dto, nil
 }
 
@@ -83,93 +78,42 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) CreateMany(c context.Con
 
 	res := r.DB.Session(&gorm.Session{CreateBatchSize: createBatchSize}).WithContext(c).Create(&dtos)
 	if res.Error != nil {
-		return nil, res.Error
+		return nil, wrapGormError(res.Error)
 	}
-
 	return dtos, nil
 }
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Delete(c context.Context, id types.ID) error {
-	/*
-		model, err := r.Get(c, id)
-		if err != nil {
-			return err
-		}*/
-
-	filter := make(map[string]any)
-
-	if len(r.Schema.PrimaryFields) == 1 {
-		fName := r.Schema.PrimaryFields[0].DBName
-		filter[fName] = id
-	} else if len(r.Schema.PrimaryFields) > 1 {
-		ids, ok := id.(map[string]any)
-		if !ok {
-			return errors.New("invalid id, not match")
-		}
-
-		if len(ids) != len(r.Schema.PrimaryFields) {
-			return errors.New("invalid id, size not match")
-		}
-
-		for _, primaryField := range r.Schema.PrimaryFields {
-			// fmt.Printf("primaryField dbname: %s, name: %s\n", primaryField.DBName, primaryField.Name)
-			filter[primaryField.DBName] = ids[primaryField.DBName]
-		}
+	filter, err := r.primaryKeysFilter(id)
+	if err != nil {
+		return err
 	}
-
-	fmt.Printf("PrimaryFields: table: %s, %v\n", r.Schema.Table, filter)
-
 	var dto DTO
 	res := r.DB.WithContext(c).Delete(&dto, filter)
-	return res.Error
+	return wrapGormError(res.Error)
 }
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Update(c context.Context, id types.ID, updateDTO *UpdateDTO, opts ...types.UpdateOption) (*DTO, error) {
-	// modelValue := reflect.New(r.Schema.ModelType)
 	dto, err := r.Get(c, id)
 	if err != nil {
 		return nil, err
 	}
-
 	// dto 在 updates之后也被改变了
 	res := r.DB.Model(dto).WithContext(c).Updates(updateDTO)
 	if res.Error != nil {
-		return nil, res.Error
+		return nil, wrapGormError(res.Error)
 	}
-
-	// TODO 返回对象
 	return dto, nil
 }
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Get(c context.Context, id types.ID) (*DTO, error) {
-	filter := make(map[string]any)
-
-	if len(r.Schema.PrimaryFields) == 1 {
-		fName := r.Schema.PrimaryFields[0].DBName
-		filter[fName] = id
-	} else if len(r.Schema.PrimaryFields) > 1 {
-		ids, ok := id.(map[string]any)
-		if !ok {
-			return nil, errors.New("invalid id, not match")
-		}
-		if len(ids) != len(r.Schema.PrimaryFields) {
-			return nil, errors.New("invalid id, size not match")
-		}
-		for _, primaryField := range r.Schema.PrimaryFields {
-			// fmt.Printf("primaryField dbname: %s, name: %s\n", primaryField.DBName, primaryField.Name)
-			filter[primaryField.DBName] = ids[primaryField.DBName]
-		}
-	}
-
-	fmt.Printf("PrimaryFields: table: %s, %v\n", r.Schema.Table, filter)
-
-	var dto DTO
-	err := r.DB.WithContext(c).Where(filter).First(&dto).Error
-	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+	filter, err := r.primaryKeysFilter(id)
+	if err != nil {
 		return nil, err
 	}
-	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, nil
+	var dto DTO
+	if err := r.DB.WithContext(c).Where(filter).First(&dto).Error; err != nil {
+		return nil, wrapGormError(err)
 	}
 	return &dto, nil
 }
@@ -185,9 +129,8 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Query(c context.Context,
 	var dtos []*DTO
 	res := db.WithContext(c).Find(&dtos)
 	if res.Error != nil {
-		return nil, err
+		return nil, wrapGormError(err)
 	}
-
 	return dtos, nil
 }
 
@@ -200,22 +143,18 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Count(c context.Context,
 	}
 
 	var dto DTO
-
 	var count int64
 	res := db.WithContext(c).Model(dto).Count(&count)
 	if res.Error != nil {
-		return 0, err
+		return 0, wrapGormError(err)
 	}
-
 	return count, nil
 }
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) QueryOne(c context.Context, filter map[string]any) (*DTO, error) {
 	filterQueryBuilder := query.NewFilterQueryBuilder(r.Schema)
 
-	db, err := filterQueryBuilder.BuildQuery(&types.PageQuery{
-		Filter: filter,
-	}, r.DB)
+	db, err := filterQueryBuilder.BuildQuery(&types.PageQuery{Filter: filter}, r.DB)
 	if err != nil {
 		return nil, err
 	}
@@ -223,9 +162,8 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) QueryOne(c context.Conte
 	var dto DTO
 	res := db.Model(&dto).WithContext(c).First(&dto)
 	if res.Error != nil {
-		return nil, err
+		return nil, wrapGormError(err)
 	}
-
 	return &dto, nil
 }
 
@@ -244,12 +182,10 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Aggregate(
 	}
 
 	var results []map[string]any
-
 	res := db.Find(&results)
 	if res.Error != nil {
-		return nil, res.Error
+		return nil, wrapGormError(res.Error)
 	}
-
 	return query.ConvertToAggregateResponse(results)
 }
 
@@ -264,7 +200,7 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) CursorQuery(c context.Co
 	var result []*DTO
 	res := db.WithContext(c).Find(&result)
 	if res.Error != nil {
-		return nil, nil, err
+		return nil, nil, wrapGormError(res.Error)
 	}
 
 	extra := &types.CursorExtra{}
@@ -276,9 +212,8 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) CursorQuery(c context.Co
 	if len(result) == int(q.Limit+1) {
 		extra.HasNext = true
 		extra.HasPrevious = true
-
 		result = result[0 : len(result)-1]
-		fmt.Printf("len(result) == q.Limit itemCount: %d, limit: %d\n", len(result), q.Limit)
+		// fmt.Printf("len(result) == q.Limit itemCount: %d, limit: %d\n", len(result), q.Limit)
 	}
 
 	toCursor := func(item *DTO) (string, error) {
@@ -328,4 +263,41 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) CursorQuery(c context.Co
 	}
 
 	return result, extra, nil
+}
+
+func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) primaryKeysFilter(id types.ID) (map[string]any, error) {
+	filter := make(map[string]any)
+
+	if len(r.Schema.PrimaryFields) == 1 {
+		fName := r.Schema.PrimaryFields[0].DBName
+		filter[fName] = id
+
+	} else if len(r.Schema.PrimaryFields) > 1 {
+		ids, ok := id.(map[string]any)
+		if !ok {
+			return nil, errors.New("invalid id, should be associated primary keys")
+		}
+		if len(ids) != len(r.Schema.PrimaryFields) {
+			return nil, errors.New("invalid id, primary keys' size not match")
+		}
+		for _, primaryField := range r.Schema.PrimaryFields {
+			// fmt.Printf("primaryField dbname: %s, name: %s\n", primaryField.DBName, primaryField.Name)
+			if value, ok := ids[primaryField.DBName]; ok {
+				filter[primaryField.DBName] = value
+			} else {
+				return nil, errors.New("invalid id, missing primary key value")
+			}
+		}
+	}
+	// fmt.Printf("PrimaryFields: table: %s, %v\n", r.Schema.Table, filter)
+	return filter, nil
+}
+
+func wrapGormError(err error) error {
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return types.ErrNotFound
+		}
+	}
+	return err
 }

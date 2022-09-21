@@ -45,11 +45,11 @@ func extractResponse(response map[string]any) (*types.AggregateResponse, error) 
 
 	agg := &types.AggregateResponse{}
 
-	for resultField, _ /*v*/ := range response {
+	for resultField /*, v*/ := range response {
 		matchResult := AGG_REGEXP.FindAllStringSubmatch(resultField, -1)
 
 		if len(matchResult[0]) != 3 {
-			return nil, errors.New(fmt.Sprintf("Unknown aggregate column encountered for %s.", resultField))
+			return nil, fmt.Errorf("unknown aggregate column encountered for %s", resultField)
 		}
 
 		matchedFunc := matchResult[0][1]
@@ -88,46 +88,42 @@ func (b *AggregateBuilder) Build(db *gorm.DB, aggregate *types.AggregateQuery, a
 	if err != nil {
 		return nil, err
 	}
-	for _, column := range columns {
-		totalColumns = append(totalColumns, column)
-	}
+	totalColumns = append(totalColumns, columns...)
 
 	aggregators := []aggregatePayload{
-		aggregatePayload{
+		{
 			Fn:     AggregateFuncCOUNT,
 			Fields: aggregate.Count,
 		},
-		aggregatePayload{
+		{
 			Fn:     AggregateFuncSUM,
 			Fields: aggregate.Sum,
 		},
-		aggregatePayload{
+		{
 			Fn:     AggregateFuncAVG,
 			Fields: aggregate.Avg,
 		},
-		aggregatePayload{
+		{
 			Fn:     AggregateFuncAVG,
 			Fields: aggregate.Avg,
 		},
-		aggregatePayload{
+		{
 			Fn:     AggregateFuncMAX,
 			Fields: aggregate.Max,
 		},
-		aggregatePayload{
+		{
 			Fn:     AggregateFuncMIN,
 			Fields: aggregate.Min,
 		},
 	}
 
 	for _, aggregator := range aggregators {
-		columns, err = b.createAggSelect(db, aggregator.Fn, aggregator.Fields, alias)
-		for _, column := range columns {
-			totalColumns = append(totalColumns, column)
-		}
+		columns, _ = b.createAggSelect(db, aggregator.Fn, aggregator.Fields, alias)
+		totalColumns = append(totalColumns, columns...)
 	}
 
 	if len(totalColumns) == 0 {
-		return nil, errors.New("No aggregate fields found.")
+		return nil, errors.New("no aggregate fields found")
 	}
 
 	/*
