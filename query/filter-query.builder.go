@@ -1,7 +1,6 @@
 package query
 
 import (
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -88,8 +87,8 @@ func (b *FilterQueryBuilder) applyFilter(db *gorm.DB, filter map[string]any) (*g
 		return db, nil
 	}
 
-	j, _ := json.Marshal(b.getReferencedRelationsRecursive(b.schema, filter))
-	fmt.Printf("b.getReferencedRelationsRecursive(b.schema, filter): %v\n", string(j))
+	// j, _ := json.Marshal(b.getReferencedRelationsRecursive(b.schema, filter))
+	// fmt.Printf("b.getReferencedRelationsRecursive(b.schema, filter): %v\n", string(j))
 
 	expression, err := b.whereBuilder.build(filter, b.getReferencedRelationsRecursive(b.schema, filter), "")
 	if err != nil {
@@ -112,7 +111,7 @@ func (b *FilterQueryBuilder) applyRelationJoinsRecursive(db *gorm.DB, relationsM
 			relation = fmt.Sprintf("%s.%s", alias, relation)
 		}
 
-		fmt.Printf("join relation: %v\n", relation)
+		// fmt.Printf("join relation: %v\n", relation)
 
 		// TODO 目前 join 无法完成 多级关联
 		return b.applyRelationJoinsRecursive(
@@ -161,7 +160,7 @@ func (b *FilterQueryBuilder) getReferencedRelationsRecursive(schema *schema.Sche
 			}
 
 			subFilter := b.getReferencedRelationsRecursive(relationMetadata.FieldSchema, filterValue1)
-			fmt.Printf("relationMetadata.Schema: %v, %v, %v\n", relationMetadata.FieldSchema, filterValue1, subFilter)
+			// fmt.Printf("relationMetadata.Schema: %v, %v, %v\n", relationMetadata.FieldSchema, filterValue1, subFilter)
 			for k, v := range subFilter {
 				mmm[k] = v
 			}

@@ -1,8 +1,6 @@
 package query
 
 import (
-	"fmt"
-
 	"gorm.io/gorm/clause"
 )
 
@@ -94,8 +92,8 @@ func (b *WhereBuilder) filterFields(filter map[string]any, relationNames map[str
 
 	for field, value := range filter {
 		if field != "and" && field != "or" {
-			fmt.Printf("filterFields: %s\n", field)
-			fmt.Printf("relationNames: %v\n", relationNames)
+			// fmt.Printf("filterFields: %s\n", field)
+			// fmt.Printf("relationNames: %v\n", relationNames)
 			expression, err := b.withFilterComparison(
 				field,
 				value.(map[string]any),
@@ -110,7 +108,7 @@ func (b *WhereBuilder) filterFields(filter map[string]any, relationNames map[str
 		}
 	}
 
-	fmt.Printf("filterFields expressions: %v\n", expressions)
+	// fmt.Printf("filterFields expressions: %v\n", expressions)
 
 	return clause.And(expressions...), nil
 }
@@ -129,7 +127,7 @@ func (b *WhereBuilder) withFilterComparison(field string, cmp map[string]any, re
 		sqlComparisons = append(sqlComparisons, sqlComparison)
 	}
 
-	fmt.Printf("withFilterComparison: %s, %v\n", field, sqlComparisons)
+	// fmt.Printf("withFilterComparison: %s, %v\n", field, sqlComparisons)
 
 	return clause.And(clause.Or(sqlComparisons...)), nil
 }
