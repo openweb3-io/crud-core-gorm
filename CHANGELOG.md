@@ -1,6 +1,12 @@
 <a name="unreleased"></a>
 ## [Unreleased]
 
+### Docs
+- 更新 changelog
+
+### Fix
+- 适配 gorm 错误为 crud-core 错误
+
 
 <a name="v0.0.5"></a>
 ## [v0.0.5] - 2022-09-21
