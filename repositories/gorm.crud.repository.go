@@ -129,7 +129,7 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Query(c context.Context,
 	var dtos []*DTO
 	res := db.WithContext(c).Find(&dtos)
 	if res.Error != nil {
-		return nil, wrapGormError(err)
+		return nil, wrapGormError(res.Error)
 	}
 	return dtos, nil
 }
@@ -146,7 +146,7 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Count(c context.Context,
 	var count int64
 	res := db.WithContext(c).Model(dto).Count(&count)
 	if res.Error != nil {
-		return 0, wrapGormError(err)
+		return 0, wrapGormError(res.Error)
 	}
 	return count, nil
 }
@@ -162,7 +162,7 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) QueryOne(c context.Conte
 	var dto DTO
 	res := db.Model(&dto).WithContext(c).First(&dto)
 	if res.Error != nil {
-		return nil, wrapGormError(err)
+		return nil, wrapGormError(res.Error)
 	}
 	return &dto, nil
 }
