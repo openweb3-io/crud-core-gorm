@@ -435,13 +435,11 @@ func TestGet(t *testing.T) {
 	assert.Equal(t, user.ID, gotUser.ID)
 	assert.Equal(t, user.Name, gotUser.Name)
 
-	gotUser, err = r.Get(c, "123456")
-	assert.Nil(t, err)
-	assert.Nil(t, gotUser)
+	_, err = r.Get(c, "123456")
+	assert.ErrorIs(t, err, types.ErrNotFound)
 
-	gotUser, err = r.Get(c, "Where 1 = 1")
-	assert.Nil(t, err)
-	assert.Nil(t, gotUser)
+	_, err = r.Get(c, "Where 1 = 1")
+	assert.ErrorIs(t, err, types.ErrNotFound)
 
 	relationRepo := NewGormCrudRepository[UserRelationEntity, UserRelationEntity, map[string]any](db)
 
@@ -454,23 +452,18 @@ func TestGet(t *testing.T) {
 	}
 	relationRepo.Create(c, relation)
 
-	gotRelation, err := relationRepo.Get(c, "123")
-	t.Log(err)
+	_, err = relationRepo.Get(c, "123")
 	assert.NotNil(t, err)
-	assert.Nil(t, gotRelation)
 
-	gotRelation, err = relationRepo.Get(c, map[string]any{"from": from})
-	t.Log(err)
+	_, err = relationRepo.Get(c, map[string]any{"from": from})
 	assert.NotNil(t, err)
-	assert.Nil(t, gotRelation)
 
-	gotRelation, err = relationRepo.Get(c, map[string]any{"from": from, "to": to})
+	gotRelation, err := relationRepo.Get(c, map[string]any{"from": from, "to": to})
 	assert.Nil(t, err)
 	assert.Equal(t, relation.From, gotRelation.From)
 	assert.Equal(t, relation.To, gotRelation.To)
 	assert.True(t, relation.Status)
 
 	gotRelation, err = relationRepo.Get(c, map[string]any{"from": from, "to": "douyin|12345"})
-	assert.Nil(t, err)
-	assert.Nil(t, gotRelation)
+	assert.ErrorIs(t, err, types.ErrNotFound)
 }
