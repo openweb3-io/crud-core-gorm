@@ -289,18 +289,11 @@ func (b *FilterQueryBuilder) ensureOrders(query *types.CursorQuery) {
 
 	// 没有id的排序，直接要追加 ID
 	if !hasId {
-		index := 0
 		if query.Sort == nil {
 			query.Sort = make([]string, 1)
 			query.Sort[0] = "id"
 		} else {
-			tmp := query.Sort
-			query.Sort = make([]string, len(query.Sort)+1)
-			query.Sort[0] = "id"
-			for i, f := range tmp {
-				query.Sort[i+1] = f
-				index++
-			}
+			query.Sort = append(query.Sort, "id")
 		}
 	}
 }
