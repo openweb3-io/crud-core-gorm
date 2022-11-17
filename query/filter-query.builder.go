@@ -63,8 +63,10 @@ func (b *FilterQueryBuilder) BuildCursorQuery(q *types.CursorQuery, db *gorm.DB)
 		return nil, err
 	}
 
+	// 追加主键排序，防止数据重复
 	b.ensureOrders(q)
 
+	// 游标过滤
 	db, err = b.buildCursorFilter(db, q)
 	if err != nil {
 		return nil, err
@@ -272,135 +274,127 @@ func (b *FilterQueryBuilder) applyPaging(db *gorm.DB, pagination map[string]int)
 }
 
 func (b *FilterQueryBuilder) ensureOrders(query *types.CursorQuery) {
-	hasId := false
-	for _, sortField := range query.Sort {
-		if sortField[0:1] == "-" {
-			sortField = sortField[1:]
-		}
-
-		if sortField[0:1] == "+" {
-			sortField = sortField[1:]
-		}
-
-		if sortField == "id" {
-			hasId = true
-		}
+	if query.Sort == nil {
+		query.Sort = make([]string, 0)
 	}
 
-	// 没有id的排序，直接要追加 ID
-	if !hasId {
-		if query.Sort == nil {
-			query.Sort = make([]string, 1)
-			query.Sort[0] = "id"
-		} else {
-			query.Sort = append(query.Sort, "id")
-		}
-	}
-}
+	missingPkFields := make([]string, 0)
 
-func (b *FilterQueryBuilder) buildCursorFilter(db *gorm.DB, query *types.CursorQuery) (*gorm.DB, error) {
-	ors := []clause.Expression{}
+	for _, pkField := range b.schema.PrimaryFieldDBNames {
 
-	if len(query.Cursor) > 0 {
-		cursor := &types.Cursor{}
-		err := cursor.Unmarshal(query.Cursor)
-		if err != nil {
-			return nil, err
-		}
+		hasPkField := false
 
-		if len(cursor.Value) == 0 {
-			return nil, nil
-		}
-
-		if len(cursor.Value) != len(query.Sort) {
-			return nil, fmt.Errorf("cursor format fields length: %d not match orders fields length: %d", len(cursor.Value), len(query.Sort))
-		}
-
-		fields := make([]string, len(cursor.Value))
-		values := make([]any, len(cursor.Value))
-
-		for i, value := range cursor.Value {
-			// val := 1
-			sortField := query.Sort[i]
-
+		for _, sortField := range query.Sort {
 			if sortField[0:1] == "-" {
 				sortField = sortField[1:]
-				// val = -1
 			}
 
 			if sortField[0:1] == "+" {
 				sortField = sortField[1:]
 			}
 
-			field, ok := b.schema.FieldsByDBName[sortField]
-			if !ok {
-				err := fmt.Errorf("ERR_DB_UNKNOWN_FIELD %s", sortField)
-				return nil, err
+			if pkField == sortField {
+				hasPkField = true
+				break
 			}
-			fields[i] = sortField
+		}
 
-			switch field.DataType {
-			case "time":
-				// 本身就是 time 类型
-				if t, ok := value.(time.Time); ok {
-					values[i] = t
-				}
+		if !hasPkField {
+			missingPkFields = append(missingPkFields, pkField)
+		}
+	}
 
-				v, err := time.Parse(time.RFC3339, value.(string))
-				if err == nil {
-					values[i] = v
+	if len(missingPkFields) > 0 {
+		query.Sort = append(query.Sort, missingPkFields...)
+	}
+}
+
+func (b *FilterQueryBuilder) buildCursorFilter(db *gorm.DB, query *types.CursorQuery) (*gorm.DB, error) {
+	if len(query.Cursor) == 0 {
+		return db, nil
+	}
+
+	cursor := &types.Cursor{}
+	err := cursor.Unmarshal(query.Cursor)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(cursor.Value) == 0 {
+		return db, nil
+	}
+	if len(cursor.Value) != len(query.Sort) {
+		return nil, fmt.Errorf("cursor format fields length: %d not match orders fields length: %d", len(cursor.Value), len(query.Sort))
+	}
+
+	fields := make([]string, len(cursor.Value))
+	values := make([]any, len(cursor.Value))
+	isDescs := make([]bool, len(cursor.Value))
+
+	for i, value := range cursor.Value {
+		sortField := query.Sort[i]
+		isDesc := false
+
+		if sortField[0:1] == "-" {
+			sortField = sortField[1:]
+			isDesc = true
+		}
+
+		if sortField[0:1] == "+" {
+			sortField = sortField[1:]
+		}
+
+		field, ok := b.schema.FieldsByDBName[sortField]
+		if !ok {
+			return nil, fmt.Errorf("ERR_DB_UNKNOWN_FIELD %s", sortField)
+		}
+		fields[i] = sortField
+		isDescs[i] = isDesc
+
+		switch field.DataType {
+		case "time":
+			switch v := value.(type) {
+			case int64:
+				values[i] = time.UnixMilli(v)
+			case time.Time, *time.Time:
+				values[i] = v
+			case string:
+				if values[i], err = time.Parse(time.RFC3339, v); err != nil {
+					return nil, err
 				}
-				// TODO 毫秒类型
 			default:
-				values[i] = value
+				return nil, fmt.Errorf("field %s value type error", sortField)
 			}
+		default:
+			values[i] = value
 		}
+	}
 
-		sort_field_0_direction := 1
-		sort_field_0 := query.Sort[0]
+	ors := []clause.Expression{}
 
-		if sort_field_0[0:1] == "-" {
-			// sort_field_0 = sort_field_0[1:]
-			sort_field_0_direction = -1
+	for i := 0; i < len(cursor.Value); i++ {
+
+		ands := make([]clause.Expression, i+1)
+
+		for j := 0; j < i; j++ {
+			ands[j] = clause.Eq{Column: fields[j], Value: values[j]}
 		}
-
-		// if sort_field_0[0:1] == "+" {
-		// 	sort_field_0 = sort_field_0[1:]
-		// }
 
 		if query.Direction == types.CursorDirectionBefore {
-			// before
-			if sort_field_0_direction == -1 {
-				var ands []clause.Expression
-				for i, field := range fields {
-					ands = append(ands, clause.Gt{Column: field, Value: values[i]})
-					ors = append(ors, clause.And(ands...))
-				}
+			if isDescs[i] {
+				ands[i] = clause.Gt{Column: fields[i], Value: values[i]}
 			} else {
-				var ands []clause.Expression
-				for i, field := range fields {
-					ands = append(ands, clause.Lt{Column: field, Value: values[i]})
-					ors = append(ors, clause.And(ands...))
-				}
+				ands[i] = clause.Lt{Column: fields[i], Value: values[i]}
 			}
 		} else {
-			// after
-			if sort_field_0_direction == -1 {
-				var ands []clause.Expression
-				for i, field := range fields {
-					ands = append(ands, clause.Lt{Column: field, Value: values[i]})
-
-					ors = append(ors, clause.And(ands...))
-				}
+			if isDescs[i] {
+				ands[i] = clause.Lt{Column: fields[i], Value: values[i]}
 			} else {
-				var ands []clause.Expression
-				for i, field := range fields {
-					ands = append(ands, clause.Gt{Column: field, Value: values[i]})
-
-					ors = append(ors, clause.And(ands...))
-				}
+				ands[i] = clause.Gt{Column: fields[i], Value: values[i]}
 			}
 		}
+
+		ors = append(ors, clause.And(ands...))
 	}
 
 	if len(ors) > 0 {

@@ -29,11 +29,12 @@ func (user *IdentityEntity) TableName() string {
 
 type UserEntity struct {
 	// gorm.Model
-	ID         string            `gorm:"column:id;type:string; size:40; primaryKey"`
-	Name       string            `gorm:"column:name"`
-	Country    string            `gorm:"column:country"`
-	Age        int               `gorm:"column:age"`
-	Birthday   time.Time         `gorm:"column:birthday"`
+	ID         string    `gorm:"column:id;type:string; size:40; primaryKey"`
+	Name       string    `gorm:"column:name"`
+	Country    string    `gorm:"column:country"`
+	Age        int       `gorm:"column:age"`
+	Birthday   time.Time `gorm:"column:birthday"`
+	CreatedAt  *time.Time
 	Identities []*IdentityEntity `json:"identities" gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
 
@@ -137,6 +138,41 @@ func TestCreateMany(t *testing.T) {
 	for _, u := range createdUsers {
 		t.Logf("批量创建用户: %v\n", u)
 	}
+}
+
+func TestGormCursorQuery(t *testing.T) {
+	db := SetupDB()
+	r := NewGormCrudRepository[UserEntity, UserEntity, map[string]any](db)
+	c := context.TODO()
+
+	// for i := 0; i < 20; i++ {
+	// 	r.Create(c, &UserEntity{
+	// 		ID:       fmt.Sprintf("%d", i),
+	// 		Name:     fmt.Sprintf("name%d", i),
+	// 		Birthday: time.Now().Add(time.Duration(i) * time.Hour),
+	// 	})
+	// }
+
+	users, extra, err := r.CursorQuery(c, &types.CursorQuery{
+		Filter:    map[string]any{"name": map[string]any{"like": "name%"}},
+		Limit:     5,
+		Direction: types.CursorDirectionAfter,
+		Sort:      []string{"-birthday", "+name"},
+	})
+	assert.Nil(t, err)
+	assert.Equal(t, true, extra.HasNext)
+	assert.Len(t, users, 5)
+
+	users, extra, err = r.CursorQuery(c, &types.CursorQuery{
+		Filter:    map[string]any{"name": map[string]any{"like": "name%"}},
+		Cursor:    extra.EndCursor,
+		Limit:     5,
+		Direction: types.CursorDirectionAfter,
+		Sort:      []string{"-birthday", "+name"},
+	})
+	assert.Nil(t, err)
+	assert.Equal(t, true, extra.HasNext)
+	assert.Equal(t, "14", users[0].ID)
 }
 
 func TestGormCrudRepository(t *testing.T) {

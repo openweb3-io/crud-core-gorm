@@ -3,7 +3,6 @@ package repositories
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
@@ -11,6 +10,7 @@ import (
 	"github.com/duolacloud/crud-core-gorm/query"
 	"github.com/duolacloud/crud-core/types"
 	"github.com/mitchellh/mapstructure"
+	"github.com/oleiade/reflections"
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
 )
@@ -213,10 +213,10 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) CursorQuery(c context.Co
 		extra.HasNext = true
 		extra.HasPrevious = true
 		result = result[0 : len(result)-1]
-		// fmt.Printf("len(result) == q.Limit itemCount: %d, limit: %d\n", len(result), q.Limit)
 	}
 
 	toCursor := func(item *DTO) (string, error) {
+		var err error
 		sortFieldValues := make([]any, len(q.Sort))
 		for i, sortField := range q.Sort {
 			if sortField[0:1] == "-" {
@@ -227,27 +227,23 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) CursorQuery(c context.Co
 				sortField = sortField[1:]
 			}
 
-			if _, ok := r.Schema.FieldsByDBName[sortField]; !ok {
+			schemaField, ok := r.Schema.FieldsByDBName[sortField]
+			if !ok {
 				return "", fmt.Errorf("field %s not found", sortField)
 			}
 
-			var m map[string]any
-			bytes, _ := json.Marshal(item)
-			_ = json.Unmarshal(bytes, &m)
-
-			sortFieldValues[i] = m[sortField]
+			sortFieldValues[i], err = reflections.GetField(*item, schemaField.Name)
+			if err != nil {
+				return "", fmt.Errorf("field %s value error", sortField)
+			}
 		}
 
-		cursor := &types.Cursor{
-			Value: sortFieldValues,
-		}
-
+		cursor := &types.Cursor{Value: sortFieldValues}
 		w := new(bytes.Buffer)
 		err = cursor.Marshal(w)
 		if err != nil {
 			return "", err
 		}
-
 		return w.String(), nil
 	}
 
