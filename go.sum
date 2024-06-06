@@ -6,6 +6,8 @@ github.com/duolacloud/crud-core v0.0.6-0.20240606091516-7be58c9f6c3a h1:xV/V6FRJ
 github.com/duolacloud/crud-core v0.0.6-0.20240606091516-7be58c9f6c3a/go.mod h1:ccLZ2Lt/psGqBxN0stZ6vpdwshq7tEUE0Z+8cpM5oBc=
 github.com/duolacloud/crud-core v0.0.6-0.20240606091855-1476cd49815e h1:c0wspGSQ8hXHveAuKPfb1cVQp2R2zLKQDXZ+3L0XGrQ=
 github.com/duolacloud/crud-core v0.0.6-0.20240606091855-1476cd49815e/go.mod h1:ccLZ2Lt/psGqBxN0stZ6vpdwshq7tEUE0Z+8cpM5oBc=
+github.com/duolacloud/crud-core v0.0.6-0.20240606092059-8e78188f9678 h1:j4P6mGgRuGaJl/JBfSk3qglzhZtJOVj9WWvlWdYIXE4=
+github.com/duolacloud/crud-core v0.0.6-0.20240606092059-8e78188f9678/go.mod h1:ccLZ2Lt/psGqBxN0stZ6vpdwshq7tEUE0Z+8cpM5oBc=
 github.com/go-sql-driver/mysql v1.6.0 h1:BCTh4TKNUYmOmMUcQ3IipzF5prigylS7XXjEkfCHuOE=
 github.com/go-sql-driver/mysql v1.6.0/go.mod h1:DCzpHaOWr8IXmIStZouvnhqoel9Qv2LBy8hT2VhHyBg=
 github.com/google/uuid v1.3.0 h1:t6JiXgmwXMjEs8VusXIJk2BXHsn+wx8BZdTaoZ5fu7I=
