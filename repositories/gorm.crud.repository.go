@@ -186,7 +186,7 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Query(c context.Context,
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Count(c context.Context, q *types.PageQuery) (int64, error) {
 	db, err := r.override.GetDB(c)
         if err != nil {
-                return nil, err
+                return 0, err
         }
 
 	filterQueryBuilder := query.NewFilterQueryBuilder(r.Schema)
