@@ -256,7 +256,7 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Aggregate(
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) CursorQuery(c context.Context, q *types.CursorQuery) ([]*DTO, *types.CursorExtra, error) {
 	db, err := r.override.GetDB(c)
         if err != nil {
-                return nil, err
+                return nil, nil, err
         }
 
 	filterQueryBuilder := query.NewFilterQueryBuilder(r.Schema)
