@@ -15,15 +15,13 @@ import (
 	"gorm.io/gorm/schema"
 )
 
-var (
-	type DataSource interface {
-		GetDB(ctx context.Context) (*gorm.DB, error)
-	}
+type DataSource interface {
+	GetDB(ctx context.Context) (*gorm.DB, error)
+}
 
-	type Override interface {
-		DataSource
-	}
-)
+type Override interface {
+	DataSource
+}
 
 
 type GormCrudRepositoryOptions struct {
