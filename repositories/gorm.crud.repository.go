@@ -121,7 +121,7 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Delete(c context.Context
 	var dto DTO
 
 	if _opts.DeleteMode == types.DeleteModeHard {
-		db := db.Unscoped()
+		db = db.Unscoped()
 	}
 
 	res := db.Clauses(clause.Returning{}).WithContext(c).Delete(&dto, filter)
