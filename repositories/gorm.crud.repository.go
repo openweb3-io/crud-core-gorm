@@ -239,8 +239,8 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Aggregate(
 	filterQueryBuilder := query.NewFilterQueryBuilder(r.Schema)
 
 	var dto DTO
-	db := db.Model(dto).WithContext(c)
-	db, err := filterQueryBuilder.BuildAggregateQuery(db, aggregateQuery, filter)
+	db = db.Model(dto).WithContext(c)
+	db, err = filterQueryBuilder.BuildAggregateQuery(db, aggregateQuery, filter)
 	if err != nil {
 		return nil, err
 	}
