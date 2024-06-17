@@ -170,7 +170,7 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Query(c context.Context,
 
 	filterQueryBuilder := query.NewFilterQueryBuilder(r.Schema)
 
-	db, err := filterQueryBuilder.BuildQuery(q, db)
+	db, err = filterQueryBuilder.BuildQuery(q, db)
 	if err != nil {
 		return nil, err
 	}
