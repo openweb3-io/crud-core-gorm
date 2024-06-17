@@ -3,7 +3,7 @@ module github.com/duolacloud/crud-core-gorm
 go 1.18
 
 require (
-	github.com/duolacloud/crud-core v0.0.6-0.20240617085828-075b6f64e7c2
+	github.com/duolacloud/crud-core v0.0.6-0.20240617090101-ea17a52e642f
 	github.com/google/uuid v1.3.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/oleiade/reflections v1.0.1
