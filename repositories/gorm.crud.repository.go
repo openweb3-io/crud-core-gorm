@@ -105,7 +105,7 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) CreateMany(c context.Con
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Delete(c context.Context, id types.ID, opts ...types.DeleteOption) error {
 	db, err := r.override.GetDB(c) 
         if err != nil {
-                return nil, err
+                return err
         }
 
 	var _opts types.DeleteOptions
