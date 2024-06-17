@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/duolacloud/crud-core-gorm/query"
+	"github.com/duolacloud/crud-core/datasource"
 	"github.com/duolacloud/crud-core/types"
 	"github.com/mitchellh/mapstructure"
 	"github.com/oleiade/reflections"
@@ -16,31 +17,22 @@ import (
 	"gorm.io/gorm/schema"
 )
 
-type DataSource interface {
-	GetDB(ctx context.Context) (*gorm.DB, error)
-}
-
-type Override interface {
-	DataSource
-}
-
-
 type GormCrudRepositoryOptions struct {
 }
 
 type GormCrudRepositoryOption func(*GormCrudRepositoryOptions)
 
 type GormCrudRepository[DTO any, CreateDTO any, UpdateDTO any] struct {
-	override Override
+	datasource datasource.DataSource[gorm.DB]
 	Schema  *schema.Schema
 	Options *GormCrudRepositoryOptions
 }
 
 func NewGormCrudRepository[DTO any, CreateDTO any, UpdateDTO any](
-	override Override,
+	datasource datasource.DataSource[gorm.DB],
 	opts ...GormCrudRepositoryOption,
 ) *GormCrudRepository[DTO, CreateDTO, UpdateDTO] {
-	r := &GormCrudRepository[DTO, CreateDTO, UpdateDTO]{override: override}
+	r := &GormCrudRepository[DTO, CreateDTO, UpdateDTO]{datasource: datasource}
 
 	var dto DTO
 	r.Schema, _ = schema.Parse(&dto, &sync.Map{}, schema.NamingStrategy{})
@@ -53,7 +45,7 @@ func NewGormCrudRepository[DTO any, CreateDTO any, UpdateDTO any](
 }
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Create(c context.Context, createDTO *CreateDTO, opts ...types.CreateOption) (*DTO, error) {
-	db, err := r.override.GetDB(c)	
+	db, err := r.datasource.GetDB(c)
 	if err != nil {
 		return nil, err
 	}
