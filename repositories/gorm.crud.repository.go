@@ -63,7 +63,7 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Create(c context.Context
 }
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) CreateMany(c context.Context, items []*CreateDTO, opts ...types.CreateManyOption) ([]*DTO, error) {
-	db, err := r.override.GetDB(c) 
+	db, err := r.datasource.GetDB(c) 
         if err != nil {
                 return nil, err
         }
@@ -96,7 +96,7 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) CreateMany(c context.Con
 }
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Delete(c context.Context, id types.ID, opts ...types.DeleteOption) error {
-	db, err := r.override.GetDB(c) 
+	db, err := r.datasource.GetDB(c) 
         if err != nil {
                 return err
         }
@@ -121,7 +121,7 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Delete(c context.Context
 }
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Update(c context.Context, id types.ID, updateDTO *UpdateDTO, opts ...types.UpdateOption) (*DTO, error) {
-	db, err := r.override.GetDB(c)
+	db, err := r.datasource.GetDB(c)
         if err != nil {
                 return nil, err
         }
@@ -139,7 +139,7 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Update(c context.Context
 }
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Get(c context.Context, id types.ID, opts... types.GetOption) (*DTO, error) {
-	db, err := r.override.GetDB(c)
+	db, err := r.datasource.GetDB(c)
         if err != nil {
                 return nil, err
         }
@@ -156,7 +156,7 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Get(c context.Context, i
 }
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Query(c context.Context, q *types.PageQuery) ([]*DTO, error) {
-	db, err := r.override.GetDB(c)
+	db, err := r.datasource.GetDB(c)
         if err != nil {
                 return nil, err
         }
@@ -177,7 +177,7 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Query(c context.Context,
 }
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Count(c context.Context, q *types.PageQuery) (int64, error) {
-	db, err := r.override.GetDB(c)
+	db, err := r.datasource.GetDB(c)
         if err != nil {
                 return 0, err
         }
@@ -199,7 +199,7 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Count(c context.Context,
 }
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) QueryOne(c context.Context, filter map[string]any) (*DTO, error) {
-	db, err := r.override.GetDB(c)
+	db, err := r.datasource.GetDB(c)
         if err != nil {
                 return nil, err
         }
@@ -224,7 +224,7 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Aggregate(
 	filter map[string]any,
 	aggregateQuery *types.AggregateQuery,
 ) ([]*types.AggregateResponse, error) {
-	db, err := r.override.GetDB(c)
+	db, err := r.datasource.GetDB(c)
         if err != nil {
                 return nil, err
         }
@@ -247,7 +247,7 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Aggregate(
 }
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) CursorQuery(c context.Context, q *types.CursorQuery) ([]*DTO, *types.CursorExtra, error) {
-	db, err := r.override.GetDB(c)
+	db, err := r.datasource.GetDB(c)
         if err != nil {
                 return nil, nil, err
         }
