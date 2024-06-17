@@ -8,6 +8,10 @@ github.com/duolacloud/crud-core v0.0.6-0.20240606091855-1476cd49815e h1:c0wspGSQ
 github.com/duolacloud/crud-core v0.0.6-0.20240606091855-1476cd49815e/go.mod h1:ccLZ2Lt/psGqBxN0stZ6vpdwshq7tEUE0Z+8cpM5oBc=
 github.com/duolacloud/crud-core v0.0.6-0.20240606092059-8e78188f9678 h1:j4P6mGgRuGaJl/JBfSk3qglzhZtJOVj9WWvlWdYIXE4=
 github.com/duolacloud/crud-core v0.0.6-0.20240606092059-8e78188f9678/go.mod h1:ccLZ2Lt/psGqBxN0stZ6vpdwshq7tEUE0Z+8cpM5oBc=
+github.com/duolacloud/crud-core v0.0.6-0.20240617083730-d9c89f10ddc2 h1:06QFUV5Hr5MxISgZPMkoOnbHjy6fvyr67dyBqtgt31M=
+github.com/duolacloud/crud-core v0.0.6-0.20240617083730-d9c89f10ddc2/go.mod h1:ccLZ2Lt/psGqBxN0stZ6vpdwshq7tEUE0Z+8cpM5oBc=
+github.com/duolacloud/crud-core v0.0.6-0.20240617085828-075b6f64e7c2 h1:QGRIvL1FTgyTQGwFJpTNkrx4shZ1CyeEV1j0zTPzJXM=
+github.com/duolacloud/crud-core v0.0.6-0.20240617085828-075b6f64e7c2/go.mod h1:ccLZ2Lt/psGqBxN0stZ6vpdwshq7tEUE0Z+8cpM5oBc=
 github.com/go-sql-driver/mysql v1.6.0 h1:BCTh4TKNUYmOmMUcQ3IipzF5prigylS7XXjEkfCHuOE=
 github.com/go-sql-driver/mysql v1.6.0/go.mod h1:DCzpHaOWr8IXmIStZouvnhqoel9Qv2LBy8hT2VhHyBg=
 github.com/google/uuid v1.3.0 h1:t6JiXgmwXMjEs8VusXIJk2BXHsn+wx8BZdTaoZ5fu7I=

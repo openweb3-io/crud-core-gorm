@@ -15,22 +15,33 @@ import (
 	"gorm.io/gorm/schema"
 )
 
+var (
+	type DataSource interface {
+		GetDB(ctx context.Context) (*gorm.DB, error)
+	}
+
+	type Override interface {
+		DataSource
+	}
+)
+
+
 type GormCrudRepositoryOptions struct {
 }
 
 type GormCrudRepositoryOption func(*GormCrudRepositoryOptions)
 
 type GormCrudRepository[DTO any, CreateDTO any, UpdateDTO any] struct {
-	DB      *gorm.DB
+	override Override
 	Schema  *schema.Schema
 	Options *GormCrudRepositoryOptions
 }
 
 func NewGormCrudRepository[DTO any, CreateDTO any, UpdateDTO any](
-	DB *gorm.DB,
+	override Override,
 	opts ...GormCrudRepositoryOption,
 ) *GormCrudRepository[DTO, CreateDTO, UpdateDTO] {
-	r := &GormCrudRepository[DTO, CreateDTO, UpdateDTO]{DB: DB}
+	r := &GormCrudRepository[DTO, CreateDTO, UpdateDTO]{override: override}
 
 	var dto DTO
 	r.Schema, _ = schema.Parse(&dto, &sync.Map{}, schema.NamingStrategy{})
@@ -43,12 +54,17 @@ func NewGormCrudRepository[DTO any, CreateDTO any, UpdateDTO any](
 }
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Create(c context.Context, createDTO *CreateDTO, opts ...types.CreateOption) (*DTO, error) {
-	var dto DTO
-	err := mapstructure.Decode(createDTO, &dto)
+	db, err := r.override.GetDB(c)	
 	if err != nil {
 		return nil, err
 	}
-	res := r.DB.WithContext(c).Create(&dto)
+
+	var dto DTO
+	err = mapstructure.Decode(createDTO, &dto)
+	if err != nil {
+		return nil, err
+	}
+	res := db.WithContext(c).Create(&dto)
 	if res.Error != nil {
 		return nil, wrapGormError(res.Error)
 	}
@@ -56,6 +72,11 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Create(c context.Context
 }
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) CreateMany(c context.Context, items []*CreateDTO, opts ...types.CreateManyOption) ([]*DTO, error) {
+	db, err := r.override.GetDB(c) 
+        if err != nil {
+                return nil, err
+        }
+
 	dtos := make([]*DTO, len(items))
 	for i, item := range items {
 		var dto DTO
@@ -76,52 +97,82 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) CreateMany(c context.Con
 		createBatchSize = 200
 	}
 
-	res := r.DB.Session(&gorm.Session{CreateBatchSize: createBatchSize}).WithContext(c).Create(&dtos)
+	res := db.Session(&gorm.Session{CreateBatchSize: createBatchSize}).WithContext(c).Create(&dtos)
 	if res.Error != nil {
 		return nil, wrapGormError(res.Error)
 	}
 	return dtos, nil
 }
 
-func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Delete(c context.Context, id types.ID) error {
+func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Delete(c context.Context, id types.ID, opts ...types.DeleteOption) error {
+	db, err := r.override.GetDB(c) 
+        if err != nil {
+                return nil, err
+        }
+
+	var _opts types.DeleteOptions
+        for _, o := range opts {
+                o(&_opts)
+        }
+
 	filter, err := r.primaryKeysFilter(id)
 	if err != nil {
 		return err
 	}
 	var dto DTO
-	res := r.DB.WithContext(c).Delete(&dto, filter)
+
+	if _opts.DeleteMode = types.DeleteModeHard {
+		db := db.Unscoped()
+	}
+
+	res := db.Clauses(clause.Returning{}).WithContext(c).Delete(&dto, filter)
 	return wrapGormError(res.Error)
 }
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Update(c context.Context, id types.ID, updateDTO *UpdateDTO, opts ...types.UpdateOption) (*DTO, error) {
+	db, err := r.override.GetDB(c)
+        if err != nil {
+                return nil, err
+        }
+
 	dto, err := r.Get(c, id)
 	if err != nil {
 		return nil, err
 	}
 	// dto 在 updates之后也被改变了
-	res := r.DB.Model(dto).WithContext(c).Updates(updateDTO)
+	res := db.Model(dto).WithContext(c).Updates(updateDTO)
 	if res.Error != nil {
 		return nil, wrapGormError(res.Error)
 	}
 	return dto, nil
 }
 
-func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Get(c context.Context, id types.ID) (*DTO, error) {
+func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Get(c context.Context, id types.ID, opts... types.GetOption) (*DTO, error) {
+	db, err := r.override.GetDB(c)
+        if err != nil {
+                return nil, err
+        }
+
 	filter, err := r.primaryKeysFilter(id)
 	if err != nil {
 		return nil, err
 	}
 	var dto DTO
-	if err := r.DB.WithContext(c).Where(filter).First(&dto).Error; err != nil {
+	if err := db.WithContext(c).Where(filter).First(&dto).Error; err != nil {
 		return nil, wrapGormError(err)
 	}
 	return &dto, nil
 }
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Query(c context.Context, q *types.PageQuery) ([]*DTO, error) {
+	db, err := r.override.GetDB(c)
+        if err != nil {
+                return nil, err
+        }
+
 	filterQueryBuilder := query.NewFilterQueryBuilder(r.Schema)
 
-	db, err := filterQueryBuilder.BuildQuery(q, r.DB)
+	db, err := filterQueryBuilder.BuildQuery(q, db)
 	if err != nil {
 		return nil, err
 	}
@@ -135,9 +186,14 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Query(c context.Context,
 }
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Count(c context.Context, q *types.PageQuery) (int64, error) {
+	db, err := r.override.GetDB(c)
+        if err != nil {
+                return nil, err
+        }
+
 	filterQueryBuilder := query.NewFilterQueryBuilder(r.Schema)
 
-	db, err := filterQueryBuilder.BuildQuery(q, r.DB)
+	db, err := filterQueryBuilder.BuildQuery(q, db)
 	if err != nil {
 		return 0, err
 	}
@@ -152,9 +208,14 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Count(c context.Context,
 }
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) QueryOne(c context.Context, filter map[string]any) (*DTO, error) {
+	db, err := r.override.GetDB(c)
+        if err != nil {
+                return nil, err
+        }
+
 	filterQueryBuilder := query.NewFilterQueryBuilder(r.Schema)
 
-	db, err := filterQueryBuilder.BuildQuery(&types.PageQuery{Filter: filter}, r.DB)
+	db, err := filterQueryBuilder.BuildQuery(&types.PageQuery{Filter: filter}, db)
 	if err != nil {
 		return nil, err
 	}
@@ -172,10 +233,15 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Aggregate(
 	filter map[string]any,
 	aggregateQuery *types.AggregateQuery,
 ) ([]*types.AggregateResponse, error) {
+	db, err := r.override.GetDB(c)
+        if err != nil {
+                return nil, err
+        }
+
 	filterQueryBuilder := query.NewFilterQueryBuilder(r.Schema)
 
 	var dto DTO
-	db := r.DB.Model(dto).WithContext(c)
+	db := db.Model(dto).WithContext(c)
 	db, err := filterQueryBuilder.BuildAggregateQuery(db, aggregateQuery, filter)
 	if err != nil {
 		return nil, err
@@ -190,9 +256,14 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Aggregate(
 }
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) CursorQuery(c context.Context, q *types.CursorQuery) ([]*DTO, *types.CursorExtra, error) {
+	db, err := r.override.GetDB(c)
+        if err != nil {
+                return nil, err
+        }
+
 	filterQueryBuilder := query.NewFilterQueryBuilder(r.Schema)
 
-	db, err := filterQueryBuilder.BuildCursorQuery(q, r.DB)
+	db, err := filterQueryBuilder.BuildCursorQuery(q, db)
 	if err != nil {
 		return nil, nil, err
 	}
