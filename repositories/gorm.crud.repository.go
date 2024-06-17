@@ -261,7 +261,7 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) CursorQuery(c context.Co
 
 	filterQueryBuilder := query.NewFilterQueryBuilder(r.Schema)
 
-	db, err := filterQueryBuilder.BuildCursorQuery(q, db)
+	db, err = filterQueryBuilder.BuildCursorQuery(q, db)
 	if err != nil {
 		return nil, nil, err
 	}
