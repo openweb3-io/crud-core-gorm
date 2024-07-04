@@ -97,7 +97,10 @@ func (b *FilterQueryBuilder) applyFilter(db *gorm.DB, filter map[string]any) (*g
 		return nil, err
 	}
 
-	db = db.Where(expression)
+	if expression != nil {
+		db = db.Where(expression)
+	}
+
 	return db, nil
 }
 
