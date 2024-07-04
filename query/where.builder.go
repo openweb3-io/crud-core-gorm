@@ -51,7 +51,10 @@ func (b *WhereBuilder) build(
 	if err != nil {
 		return nil, err
 	}
-	expressions = append(expressions, expression)
+
+	if expression != nil {
+		expressions = append(expressions, expression)
+	}
 
 	if len(expressions) == 1 {
 		return expressions[0], nil
