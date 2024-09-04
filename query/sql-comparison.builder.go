@@ -2,6 +2,7 @@ package query
 
 import (
 	"fmt"
+	"reflect"
 
 	"gorm.io/gorm/clause"
 )
@@ -96,16 +97,35 @@ var DEFAULT_COMPARISON_MAP = map[string]ExpressionFunc{
 		}), nil
 	},
 	"in": func(field string, value any) (clause.Expression, error) {
+		var values []any
+		if reflect.TypeOf(value).Kind() == reflect.Slice {
+			s := reflect.ValueOf(value)
+
+			values = make([]any, s.Len())
+			for i := 0; i < s.Len(); i++ {
+				values[i] = s.Index(i).Interface()
+			}
+		}
+
 		return clause.IN{
 			Column: field,
-			Values: value.([]any),
+			Values: values,
 		}, nil
 	},
 	"notin": func(field string, value any) (clause.Expression, error) {
-		// NegationBuild
+		var values []any
+		if reflect.TypeOf(value).Kind() == reflect.Slice {
+			s := reflect.ValueOf(value)
+
+			values = make([]any, s.Len())
+			for i := 0; i < s.Len(); i++ {
+				values[i] = s.Index(i).Interface()
+			}
+		}
+
 		return clause.Not(clause.IN{
 			Column: field,
-			Values: value.([]any),
+			Values: values,
 		}), nil
 	},
 	"between": func(field string, value any) (clause.Expression, error) {
