@@ -98,7 +98,7 @@ var DEFAULT_COMPARISON_MAP = map[string]ExpressionFunc{
 	},
 	"in": func(field string, value any) (clause.Expression, error) {
 		var values []any
-		if reflect.TypeOf(value).Kind() == reflect.Slice {
+		if reflect.TypeOf(value).Kind() == reflect.Slice || reflect.TypeOf(value).Kind() == reflect.Array {
 			s := reflect.ValueOf(value)
 
 			values = make([]any, s.Len())
@@ -114,7 +114,7 @@ var DEFAULT_COMPARISON_MAP = map[string]ExpressionFunc{
 	},
 	"notin": func(field string, value any) (clause.Expression, error) {
 		var values []any
-		if reflect.TypeOf(value).Kind() == reflect.Slice {
+		if reflect.TypeOf(value).Kind() == reflect.Slice || reflect.TypeOf(value).Kind() == reflect.Array {
 			s := reflect.ValueOf(value)
 
 			values = make([]any, s.Len())
