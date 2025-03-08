@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/duolacloud/crud-core/types"
 	"gorm.io/gorm"
@@ -46,6 +47,7 @@ func extractResponse(response map[string]any) (*types.AggregateResponse, error) 
 	agg := &types.AggregateResponse{}
 
 	for resultField /*, v*/ := range response {
+		resultField = strings.ToUpper(resultField)
 		matchResult := AGG_REGEXP.FindAllStringSubmatch(resultField, -1)
 
 		if len(matchResult[0]) != 3 {

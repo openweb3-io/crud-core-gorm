@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/duolacloud/crud-core-gorm/query"
@@ -24,8 +25,8 @@ type GormCrudRepositoryOption func(*GormCrudRepositoryOptions)
 
 type GormCrudRepository[DTO any, CreateDTO any, UpdateDTO any] struct {
 	datasource datasource.DataSource[gorm.DB]
-	Schema  *schema.Schema
-	Options *GormCrudRepositoryOptions
+	Schema     *schema.Schema
+	Options    *GormCrudRepositoryOptions
 }
 
 func NewGormCrudRepository[DTO any, CreateDTO any, UpdateDTO any](
@@ -63,10 +64,10 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Create(c context.Context
 }
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) CreateMany(c context.Context, items []*CreateDTO, opts ...types.CreateManyOption) ([]*DTO, error) {
-	db, err := r.datasource.GetDB(c) 
-        if err != nil {
-                return nil, err
-        }
+	db, err := r.datasource.GetDB(c)
+	if err != nil {
+		return nil, err
+	}
 
 	dtos := make([]*DTO, len(items))
 	for i, item := range items {
@@ -96,15 +97,15 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) CreateMany(c context.Con
 }
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Delete(c context.Context, id types.ID, opts ...types.DeleteOption) error {
-	db, err := r.datasource.GetDB(c) 
-        if err != nil {
-                return err
-        }
+	db, err := r.datasource.GetDB(c)
+	if err != nil {
+		return err
+	}
 
 	var _opts types.DeleteOptions
-        for _, o := range opts {
-                o(&_opts)
-        }
+	for _, o := range opts {
+		o(&_opts)
+	}
 
 	filter, err := r.primaryKeysFilter(id)
 	if err != nil {
@@ -122,9 +123,9 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Delete(c context.Context
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Update(c context.Context, id types.ID, updateDTO *UpdateDTO, opts ...types.UpdateOption) (*DTO, error) {
 	db, err := r.datasource.GetDB(c)
-        if err != nil {
-                return nil, err
-        }
+	if err != nil {
+		return nil, err
+	}
 
 	dto, err := r.Get(c, id)
 	if err != nil {
@@ -138,11 +139,11 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Update(c context.Context
 	return dto, nil
 }
 
-func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Get(c context.Context, id types.ID, opts... types.GetOption) (*DTO, error) {
+func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Get(c context.Context, id types.ID, opts ...types.GetOption) (*DTO, error) {
 	db, err := r.datasource.GetDB(c)
-        if err != nil {
-                return nil, err
-        }
+	if err != nil {
+		return nil, err
+	}
 
 	filter, err := r.primaryKeysFilter(id)
 	if err != nil {
@@ -157,9 +158,9 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Get(c context.Context, i
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Query(c context.Context, q *types.PageQuery) ([]*DTO, error) {
 	db, err := r.datasource.GetDB(c)
-        if err != nil {
-                return nil, err
-        }
+	if err != nil {
+		return nil, err
+	}
 
 	filterQueryBuilder := query.NewFilterQueryBuilder(r.Schema)
 
@@ -178,9 +179,9 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Query(c context.Context,
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Count(c context.Context, q *types.PageQuery) (int64, error) {
 	db, err := r.datasource.GetDB(c)
-        if err != nil {
-                return 0, err
-        }
+	if err != nil {
+		return 0, err
+	}
 
 	filterQueryBuilder := query.NewFilterQueryBuilder(r.Schema)
 
@@ -200,9 +201,9 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Count(c context.Context,
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) QueryOne(c context.Context, filter map[string]any) (*DTO, error) {
 	db, err := r.datasource.GetDB(c)
-        if err != nil {
-                return nil, err
-        }
+	if err != nil {
+		return nil, err
+	}
 
 	filterQueryBuilder := query.NewFilterQueryBuilder(r.Schema)
 
@@ -225,9 +226,9 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Aggregate(
 	aggregateQuery *types.AggregateQuery,
 ) ([]*types.AggregateResponse, error) {
 	db, err := r.datasource.GetDB(c)
-        if err != nil {
-                return nil, err
-        }
+	if err != nil {
+		return nil, err
+	}
 
 	filterQueryBuilder := query.NewFilterQueryBuilder(r.Schema)
 
@@ -248,9 +249,9 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) Aggregate(
 
 func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) CursorQuery(c context.Context, q *types.CursorQuery) ([]*DTO, *types.CursorExtra, error) {
 	db, err := r.datasource.GetDB(c)
-        if err != nil {
-                return nil, nil, err
-        }
+	if err != nil {
+		return nil, nil, err
+	}
 
 	filterQueryBuilder := query.NewFilterQueryBuilder(r.Schema)
 
@@ -289,9 +290,14 @@ func (r *GormCrudRepository[DTO, CreateDTO, UpdateDTO]) CursorQuery(c context.Co
 				sortField = sortField[1:]
 			}
 
-			schemaField, ok := r.Schema.FieldsByDBName[sortField]
+			// trim maybe existed tablename prefix
+			baseFieldName := sortField
+			if strings.Contains(baseFieldName, ".") {
+				baseFieldName = strings.Split(baseFieldName, ".")[1]
+			}
+			schemaField, ok := r.Schema.FieldsByDBName[baseFieldName]
 			if !ok {
-				return "", fmt.Errorf("field %s not found", sortField)
+				return "", fmt.Errorf("field %s not found", baseFieldName)
 			}
 
 			sortFieldValues[i], err = reflections.GetField(*item, schemaField.Name)

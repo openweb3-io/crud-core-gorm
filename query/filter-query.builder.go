@@ -2,6 +2,7 @@ package query
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/duolacloud/crud-core/types"
@@ -241,6 +242,11 @@ func (b *FilterQueryBuilder) applySorting(db *gorm.DB, sort []string) (*gorm.DB,
 			isDesc = false
 		}
 
+		if !strings.Contains(sortField, ".") {
+			// add table name to sort field, avoiding ambiguous column error
+			sortField = strings.Join([]string{b.schema.Table, sortField}, ".")
+		}
+
 		db = db.Order(clause.OrderByColumn{Column: clause.Column{Name: sortField}, Desc: isDesc})
 	}
 
@@ -347,9 +353,14 @@ func (b *FilterQueryBuilder) buildCursorFilter(db *gorm.DB, query *types.CursorQ
 			sortField = sortField[1:]
 		}
 
-		field, ok := b.schema.FieldsByDBName[sortField]
+		// trim maybe existed tablename prefix
+		baseFieldName := sortField
+		if strings.Contains(baseFieldName, ".") {
+			baseFieldName = strings.Split(baseFieldName, ".")[1]
+		}
+		field, ok := b.schema.FieldsByDBName[baseFieldName]
 		if !ok {
-			return nil, fmt.Errorf("ERR_DB_UNKNOWN_FIELD %s", sortField)
+			return nil, fmt.Errorf("ERR_DB_UNKNOWN_FIELD %s", baseFieldName)
 		}
 		fields[i] = sortField
 		isDescs[i] = isDesc
