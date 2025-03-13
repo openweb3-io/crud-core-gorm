@@ -1,4 +1,4 @@
-package repositories
+package repositories_test
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/duolacloud/crud-core-gorm/repositories"
 	"github.com/duolacloud/crud-core/datasource"
 	"github.com/duolacloud/crud-core/types"
 	"github.com/google/uuid"
@@ -105,8 +106,8 @@ func SetupDB() datasource.DataSource[gorm.DB] {
 func TestCreateMany(t *testing.T) {
 	db := SetupDB()
 
-	r := NewGormCrudRepository[UserEntity, UserEntity, map[string]any](db)
-	// identityRepo := NewGormCrudRepository[IdentityEntity, IdentityEntity, IdentityEntity](db)
+	r := repositories.NewGormCrudRepository[UserEntity, UserEntity, map[string]any](db)
+	// identityRepo := repositories.NewGormCrudRepository[IdentityEntity, IdentityEntity, IdentityEntity](db)
 
 	c := context.TODO()
 
@@ -147,7 +148,7 @@ func TestCreateMany(t *testing.T) {
 
 func TestGormCursorQuery(t *testing.T) {
 	db := SetupDB()
-	r := NewGormCrudRepository[UserEntity, UserEntity, map[string]any](db)
+	r := repositories.NewGormCrudRepository[UserEntity, UserEntity, map[string]any](db)
 	c := context.TODO()
 
 	createdUsers := make([]*UserEntity, 0)
@@ -194,8 +195,8 @@ func TestGormCursorQuery(t *testing.T) {
 func TestGormCrudRepository(t *testing.T) {
 	db := SetupDB()
 
-	r := NewGormCrudRepository[UserEntity, UserEntity, map[string]any](db)
-	// identityRepo := NewGormCrudRepository[IdentityEntity, IdentityEntity, IdentityEntity](db)
+	r := repositories.NewGormCrudRepository[UserEntity, UserEntity, map[string]any](db)
+	// identityRepo := repositories.NewGormCrudRepository[IdentityEntity, IdentityEntity, IdentityEntity](db)
 
 	c := context.TODO()
 
@@ -306,9 +307,9 @@ func TestRelations(t *testing.T) {
 
 	c := context.TODO()
 
-	orgRepo := NewGormCrudRepository[OrganizationEntity, OrganizationEntity, OrganizationEntity](db)
-	memberRepo := NewGormCrudRepository[OrganizationMemberEntity, OrganizationMemberEntity, OrganizationMemberEntity](db)
-	userRepo := NewGormCrudRepository[UserEntity, UserEntity, UserEntity](db)
+	orgRepo := repositories.NewGormCrudRepository[OrganizationEntity, OrganizationEntity, OrganizationEntity](db)
+	memberRepo := repositories.NewGormCrudRepository[OrganizationMemberEntity, OrganizationMemberEntity, OrganizationMemberEntity](db)
+	userRepo := repositories.NewGormCrudRepository[UserEntity, UserEntity, UserEntity](db)
 
 	org, err := orgRepo.Create(c, &OrganizationEntity{
 		ID:   "1",
@@ -387,9 +388,9 @@ func TestRelations(t *testing.T) {
 func TestCount(t *testing.T) {
 	db := SetupDB()
 
-	memberRepo := NewGormCrudRepository[OrganizationMemberEntity, OrganizationMemberEntity, OrganizationMemberEntity](db)
-	orgRepo := NewGormCrudRepository[OrganizationEntity, OrganizationEntity, OrganizationEntity](db)
-	userRepo := NewGormCrudRepository[UserEntity, UserEntity, UserEntity](db)
+	memberRepo := repositories.NewGormCrudRepository[OrganizationMemberEntity, OrganizationMemberEntity, OrganizationMemberEntity](db)
+	orgRepo := repositories.NewGormCrudRepository[OrganizationEntity, OrganizationEntity, OrganizationEntity](db)
+	userRepo := repositories.NewGormCrudRepository[UserEntity, UserEntity, UserEntity](db)
 
 	mem, err := memberRepo.Create(context.TODO(), &OrganizationMemberEntity{
 		ID:             "1",
@@ -443,7 +444,7 @@ func TestCount(t *testing.T) {
 func TestAggregate(t *testing.T) {
 	db := SetupDB()
 
-	userRepo := NewGormCrudRepository[UserEntity, UserEntity, map[string]any](db)
+	userRepo := repositories.NewGormCrudRepository[UserEntity, UserEntity, map[string]any](db)
 
 	query := &types.PageQuery{
 		Fields: []string{
@@ -490,7 +491,7 @@ func TestAggregate(t *testing.T) {
 func TestGet(t *testing.T) {
 	db := SetupDB()
 
-	r := NewGormCrudRepository[UserEntity, UserEntity, map[string]any](db)
+	r := repositories.NewGormCrudRepository[UserEntity, UserEntity, map[string]any](db)
 
 	c := context.TODO()
 
@@ -524,7 +525,7 @@ func TestGet(t *testing.T) {
 	_, err = r.Get(c, "Where 1 = 1")
 	assert.ErrorIs(t, err, types.ErrNotFound)
 
-	relationRepo := NewGormCrudRepository[UserRelationEntity, UserRelationEntity, map[string]any](db)
+	relationRepo := repositories.NewGormCrudRepository[UserRelationEntity, UserRelationEntity, map[string]any](db)
 
 	from := uuid.NewString()
 	to := uuid.NewString()
