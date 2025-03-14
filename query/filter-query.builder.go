@@ -309,7 +309,8 @@ func (b *FilterQueryBuilder) ensureOrders(query *types.CursorQuery) {
 		}
 
 		if !hasPkField {
-			missingPkFields = append(missingPkFields, pkField)
+			field := strings.Join([]string{b.schema.Table, pkField}, ".")
+			missingPkFields = append(missingPkFields, field)
 		}
 	}
 
