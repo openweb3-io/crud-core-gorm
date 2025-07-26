@@ -20,7 +20,7 @@ const (
 	AggregateFuncMIN   AggregateFunc = "MIN"
 )
 
-var AGG_REGEXP = regexp.MustCompile("(AVG|SUM|COUNT|MAX|MIN|GROUP_BY)_(.*)")
+var AGG_REGEXP = regexp.MustCompile("(AVG|SUM|COUNT|MAX|MIN|GROUP_BY|avg|sum|count|max|min|group_by)_(.*)")
 
 func ConvertToAggregateResponse(aggregates []map[string]any) ([]*types.AggregateResponse, error) {
 	r := make([]*types.AggregateResponse, len(aggregates))
